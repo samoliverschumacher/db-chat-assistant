@@ -3,18 +3,18 @@ The problem we aim to address is the difficulty faced by non-data driven members
 ### Use cases  
   
 - Simple questions like;  
-- Which is the 5 biggest "x"  
-- What sorts of things can I learn from the data?  
-- What is something interesting in data table X?  
-- What is something interesting about semantic field A? (semantic field - not a literal field in a literal table, but a concept. i.e. info about a `user` might span multiple tables.)  
+  - Which is the 5 biggest "x"  
+  - What sorts of things can I learn from the data?  
+  - What is something interesting in data table X?  
+  - What is something interesting about semantic field A? (semantic field - not a literal field in a literal table, but a concept. i.e. info about a `user` might span multiple tables.)  
 - Shallow analyses;  
-- Is the difference between group A and B statistically significant?  
-- Which customers has stopped interacting?  
-- What are some typical rows? i.e. perform clustering algorithm on the table.  
+  - Is the difference between group A and B statistically significant?  
+  - Which customers has stopped interacting?  
+  - What are some typical rows? i.e. perform clustering algorithm on the table.  
 - Visualise;  
-- Something simple to present to other people later.  
+  - Something simple to present to other people later.  
 - Inputs;  
-- I want a table that has columns A, B, C, and one row for each field "x".  
-- input a .csv to use in all other use cases.  
+  - I want a table that has columns A, B, C, and one row for each field "x".  
+  - input a .csv to use in all other use cases.  
   
 > *Must reframe the above as user intentions / "Job's to be done".*
