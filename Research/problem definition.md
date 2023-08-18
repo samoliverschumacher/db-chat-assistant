@@ -1,6 +1,8 @@
+### User Story
+
 The problem we aim to address is the difficulty faced by non-data driven members of a company in effectively interacting with and deriving insights from data. Many employees, especially those without a strong background in data analysis or programming, struggle to access and interpret data to make informed decisions. This lack of data literacy hampers their ability to contribute meaningfully to data-driven discussions and hinders overall productivity and efficiency within the organization.
 
-### Use cases  
+### Use Cases  
   
 - Simple questions like;  
   - Which is the 5 biggest "x"  
