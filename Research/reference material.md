@@ -21,3 +21,7 @@
 
 ## Converting sentences into embeddings
 [link](https://www.sbert.net/)
+
+
+## Review of Todays models
+
