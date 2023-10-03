@@ -8,7 +8,7 @@ does not match any data models or contains ambiguous information.
 import traceback
 from typing import Optional, Tuple
 from dbchat.src import datastore
-from dbchat.src.query_generation import llm
+from dbchat.src.query_generation import LLMAgent
 
 try:
     import sqlvalidator
@@ -21,7 +21,7 @@ class NoAttemptsRemainingError(Exception):
 
 
 def offline_sql_validation(sql_query) -> Tuple[bool, str]:
-    """Uses a python package to do basic checks on the sql statement."""
+    """Uses a python package to do basic offline checks on the sql statement."""
     sql_query = sqlvalidator.parse(sql_query)
     
     if not sql_query.is_valid():
@@ -31,7 +31,10 @@ def offline_sql_validation(sql_query) -> Tuple[bool, str]:
 
 def compose_data_retrieval_instruction(agent_response: str, 
                                        datastore_type: datastore.types = datastore.types.SQL) -> str:
-    """Takes an LLM agent's raw response, and processes it ready for use as a SQL query"""
+    """
+    Takes an LLM agent's raw response to a prompt that askes for a SQL snippet, 
+    and processes it ready for use as a valid SQL query.
+    """
     
     if datastore_type == datastore.types.SQL:
         # trim agents response text so it only contains the SQL query
@@ -44,7 +47,25 @@ def compose_data_retrieval_instruction(agent_response: str,
     return agent_response
 
 
-def iteratvely_retrieve_sql_data(sql_query: str, config: dict) -> Optional[dict]:\
+def iteratvely_retrieve_sql_data(sql_query: str, config: dict) -> Optional[dict]:
+    """
+    Retrieves SQL data iteratively using the provided SQL query and configuration.
+    
+    This function attempts to make the database call iteratively, allowing for multiple attempts
+    in case of errors. If an error occurs during the retrieval process, the function catches
+    the database call errors and asks the model to try again. The model is a language model (LLM)
+    that can correct a problematic sql_query and generates a new SQL query for retrieval.
+    
+    Args:
+        sql_query (str): The SQL query used to retrieve the data.
+        config (dict): The configuration settings for the data retrieval.
+    
+    Returns:
+        Optional[dict]: The retrieved data as a dictionary, or None if retrieval fails.
+    
+    Raises:
+        NoAttemptsRemainingError: If the maximum number of retrieval attempts is reached without success.
+    """
     
     attempts_remaining = 3
     
@@ -66,7 +87,7 @@ def iteratvely_retrieve_sql_data(sql_query: str, config: dict) -> Optional[dict]
             
             # Agent needs to be loaded to iterate on the problematic sql query
             if model is None:
-                model = llm(config['model'])
+                model = LLMAgent(config['model'])
                 model.load()
             
             retrieval_instruction = model.ask(llm_feedback_prompt)
