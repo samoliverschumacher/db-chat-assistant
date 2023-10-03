@@ -101,8 +101,9 @@ if __name__ == "__main__":
                                                 f"{data_retrieval_instructions}")
         corrected_data_retrieval_instructions = model.ask(question=checking_data_retrieval_instructions)
         # If the LLM found a problem with its own SQL call, overwrite it before finishing.
-        if corrected_data_retrieval_instructions != "No":
+        if corrected_data_retrieval_instructions.startswith("Yes, there is something wrong with this."
+                                                            "Below is the corrected version"):
             data_retrieval_instructions = corrected_data_retrieval_instructions
-        
+    
     print("Final SQL call, or data retrieval instructions "
           f"to be made to the datastore: {data_retrieval_instructions}")
