@@ -25,7 +25,7 @@ class ModelB:
         return "answer B"
 
 
-class llm:
+class LLMAgent:
     
     def __init__(self, model_name: str):
         self.model_name = model_name
@@ -35,6 +35,7 @@ class llm:
         self._model: ModelProtocol = ModelA() if self.model_name == "model_a" else ModelB()
 
     def ask(self, question: str) -> str:
+        """Get a response from the loaded LLM"""
         try:
             return self._model.ask(question)
         except AttributeError as e:

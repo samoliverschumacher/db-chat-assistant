@@ -4,7 +4,7 @@ from typing import Optional
 
 import pandas as pd
 
-from dbchat.src.query_generation import llm
+from dbchat.src.query_generation import LLMAgent
 
 
 try:
@@ -21,7 +21,7 @@ class types(Enum):
     # DATA_RETRIEVAL_INSTRUCTIONS = auto()
     
     
-def retrieve_from_pandas_agent(instructions: dict, model: llm) -> str:
+def retrieve_from_pandas_agent(instructions: dict, model: LLMAgent) -> str:
     """Retrieves data from a langchain pandas agent."""
     df = pd.read_csv(instructions['data_location'])
     result = model.ask(instructions['text'])
