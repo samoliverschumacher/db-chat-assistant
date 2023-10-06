@@ -41,6 +41,14 @@ class LLMAgent:
         except AttributeError as e:
             print("Model not loaded. Have you called load()?")
             raise e
+        
+    def log_history():
+        # Capture the history of all LLM calls. Uses either a logging pattern, or simply stores in-memory on the object
+        raise NotImplementedError
+    
+    def reset_log_history():
+        # Clear the history of all LLM calls.
+        raise NotImplementedError
 
 
 documents = {1: "table name: employees, fields: name, organisation, manager",
