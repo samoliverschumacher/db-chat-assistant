@@ -22,6 +22,9 @@
 ## Converting sentences into embeddings
 [link](https://www.sbert.net/)
 
+This package connects to SOTA models. It's well documented, provides an alternative to manual text processing using traditional NLP. But, it may not be free or small enough to play with locally?
+- perhaps we can find smaller models, or distilled versions of it?
+
 
 ## Review of Todays models
 
