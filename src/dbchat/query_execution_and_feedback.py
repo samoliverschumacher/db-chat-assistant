@@ -73,7 +73,8 @@ def iteratvely_retrieve_sql_data(sql_query: str, config: dict) -> Optional[dict]
     
     attempts_remaining = 3
     
-    sql_query = text(sql_query) 
+    sql_query = text(sql_query)
+    
     data = None
     model = None
     # Attempt to make the database call iteratively. 
@@ -114,10 +115,9 @@ if __name__ == '__main__':
     
     SELECT * FROM employees LIMIT 1;
     """
-    
-    sql_query_excerpt = next(filter(lambda s: s.strip().startswith('SELECT '), 
-                                    agent_response.split('\n')))
-    data = iteratvely_retrieve_sql_data(sql_query_excerpt, config)
+
+    sql_query = compose_data_retrieval_instruction(agent_response)
+    data = iteratvely_retrieve_sql_data(agent_response, config)
     # Return error messages to the user, or continue
     print(f"Data retrieved: \n{data}")
 
