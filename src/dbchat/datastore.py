@@ -1,25 +1,13 @@
+from typing import List, Optional, Union
 
-from enum import Enum, auto
-from typing import Optional
-
+from sqlalchemy import RowMapping, Sequence, create_engine, TextClause
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
 import pandas as pd
 
-from dbchat.src.query_generation import LLMAgent
+
+from dbchat import LLMAgent
 
 
-try:
-    from sqlalchemy import create_engine
-    from sqlalchemy.exc import SQLAlchemyError
-except ImportError:
-    print("Warning: SQLAlchemy is not installed.")
-    pass
-
-
-class types(Enum):
-    SQL = auto()
-    PANDAS_AGENT = auto()
-    # DATA_RETRIEVAL_INSTRUCTIONS = auto()
-    
     
 def retrieve_from_pandas_agent(instructions: dict, model: LLMAgent) -> str:
     """Retrieves data from a langchain pandas agent."""
@@ -28,16 +16,16 @@ def retrieve_from_pandas_agent(instructions: dict, model: LLMAgent) -> str:
     return result
 
 
-def retrieve_from_sqllite(query: str, database_connection: dict) -> Optional[dict]:
+def retrieve_from_sqllite(query: TextClause, database_connection: dict) -> Union[Sequence[RowMapping], OperationalError]:
     """Retrieves data from a sqllite database"""
     
     engine = create_engine(database_connection['connection_string'])
     
     results_as_dict = None
     with engine.begin() as connection:
-        results = connection.execute(query)
+        
+        results = connection.execute(query)    
         results_as_dict = results.mappings().all()
     
     return results_as_dict
 
-    

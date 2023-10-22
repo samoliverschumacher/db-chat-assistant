@@ -3,7 +3,8 @@ This is the most critical block of the solution that is responsible
 for turning the user prompt and matched data to generate a database query.
 """
 
-from dbchat.src import datastore
+from dbchat.utils import datastore_types
+
 
 from typing import Protocol
 
@@ -63,14 +64,14 @@ def document_getter(document_index: int) -> str:
     datastore_metadata_component = documents[document_index]
     return datastore_metadata_component
 
-def compose_data_retrieval_prompt(users_query: str, context_documents: list[str], datastore_type: datastore.types) -> str:
+def compose_data_retrieval_prompt(users_query: str, context_documents: list[str], datastore_type: datastore_types) -> str:
     """
     Adds some context infortmation to the users original query, so the LLM can decide on 
     the instructions required to retrieve the information the user wants.
     """
-    if datastore_type == datastore.types.SQL:
+    if datastore_type == datastore_types.SQL:
         datastore_plain_text = "a SQL query"
-    elif datastore_type == datastore.types.PANDAS_AGENT:
+    elif datastore_type == datastore_types.PANDAS_AGENT:
         datastore_plain_text = "data retireval instructions"
     # elif datastore_type == datastore.types.DATA_RETRIEVAL_INSTRUCTIONS:
     #     datastore_plain_text = "data retireval instructions"
@@ -95,7 +96,7 @@ if __name__ == "__main__":
     print(f"{context_documents=}")
 
     # Create a prompt from the documents as context, and the original user query.
-    data_retrieval_prompt = compose_data_retrieval_prompt(users_query, context_documents, datastore_type=datastore.types.SQL)
+    data_retrieval_prompt = compose_data_retrieval_prompt(users_query, context_documents, datastore_type=datastore_types.SQL)
 
     # Generate a response from the LLM asking for appopriate data retrieval instruction
     model = llm("model_a")
