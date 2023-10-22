@@ -1,3 +1,7 @@
+# pip requirements: 
+# fuzzywuzzy==0.18.0
+# spacy==3.6.1
+
 import spacy
 from spacy.tokens import Token
 from fuzzywuzzy import fuzz
