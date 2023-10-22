@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import List, Optional, Union
 
 from sqlalchemy import RowMapping, Sequence, create_engine, TextClause
@@ -7,6 +8,10 @@ import pandas as pd
 
 from dbchat import LLMAgent
 
+@dataclass
+class Table:
+    fields: List[str]
+    csv: List[str]
 
     
 def retrieve_from_pandas_agent(instructions: dict, model: LLMAgent) -> str:
