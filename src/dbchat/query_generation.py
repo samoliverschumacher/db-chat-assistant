@@ -58,7 +58,7 @@ documents = {1: "table name: employees, fields: name, organisation, manager",
 
 def document_getter(document_index: int) -> str:
     """
-    Retrieves the natural language description of the metadata given by thre input index.
+    Retrieves the natural language description of the metadata given by the input index.
     """
     
     datastore_metadata_component = documents[document_index]
