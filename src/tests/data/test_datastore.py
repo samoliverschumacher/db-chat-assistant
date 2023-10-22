@@ -1,5 +1,6 @@
 from dbchat.datastore import retrieve_from_pandas_agent, retrieve_from_sqllite
 
+import pytest
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError, OperationalError
@@ -21,6 +22,7 @@ def test_retrieve_from_sqllite():
         'connection_string': 'sqlite:///data/chinook.db'
     }
     expected_result = OperationalError
-    assert type(retrieve_from_sqllite(query, database_connection)) == expected_result
+    with pytest.raises(expected_result):
+        retrieve_from_sqllite(query, database_connection)
     
 test_retrieve_from_sqllite()
