@@ -12,3 +12,8 @@ install:
 
 clean:
 	rm -f dbchat/src/dbchat.egg-info
+	find . | grep -E "(/__pycache__$|\.pyc$|\.pyo$)" | xargs rm -rf   
+# remove __pycache__
+
+test:
+	pytest
