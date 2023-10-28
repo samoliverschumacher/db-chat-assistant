@@ -44,9 +44,8 @@ def compose_data_retrieval_instruction(agent_response: str,
         # trim agents response text so it only contains the SQL query
         agent_response = agent_response[agent_response.index("SELECT"): ]
         
-    elif datastore_type == datastore_types.PANDAS_AGENT:
-        # No preprocessing of the LLM prompt is required, it can go directly to the pandas agent
-        pass
+    else:
+        raise NotImplementedError(f"{datastore_type=} not supported")
         
     return agent_response
 
