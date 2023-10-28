@@ -24,13 +24,7 @@ class Schema:
     name: str
 
 
-def retrieve_from_pandas_agent(instructions: dict, model: LLMAgent) -> str:
-    """Retrieves data from a langchain pandas agent."""
-    df = pd.read_csv(instructions['data_location'])
-    result = model.ask(instructions['text'])
-    return result
-
-
+# TODO: is this necessary while pandas is used throughout codebase: `pd.read_sql()`
 def retrieve_from_sqllite(query: TextClause, database_connection: dict) -> Union[Sequence[RowMapping], OperationalError]:
     """Retrieves data from a sqllite database"""
     
