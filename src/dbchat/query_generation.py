@@ -71,10 +71,6 @@ def compose_data_retrieval_prompt(users_query: str, context_documents: list[str]
     """
     if datastore_type == datastore_types.SQL:
         datastore_plain_text = "a SQL query"
-    elif datastore_type == datastore_types.PANDAS_AGENT:
-        datastore_plain_text = "data retireval instructions"
-    # elif datastore_type == datastore.types.DATA_RETRIEVAL_INSTRUCTIONS:
-    #     datastore_plain_text = "data retireval instructions"
     else:
         raise NotImplementedError(f"Unsupported datastore type: {datastore_type}")
     
