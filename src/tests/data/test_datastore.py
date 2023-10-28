@@ -24,5 +24,3 @@ def test_retrieve_from_sqllite():
     expected_result = OperationalError
     with pytest.raises(expected_result):
         retrieve_from_sqllite(query, database_connection)
-    
-test_retrieve_from_sqllite()

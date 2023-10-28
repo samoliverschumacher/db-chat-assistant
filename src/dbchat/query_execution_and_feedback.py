@@ -117,7 +117,7 @@ if __name__ == '__main__':
     """
 
     sql_query = compose_data_retrieval_instruction(agent_response)
-    data = iteratvely_retrieve_sql_data(agent_response, config)
+    data = iteratvely_retrieve_sql_data(sql_query, config)
     # Return error messages to the user, or continue
     print(f"Data retrieved: \n{data}")
 
