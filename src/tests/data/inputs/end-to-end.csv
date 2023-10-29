@@ -3,3 +3,4 @@ id|user_query|tables|note
 2|Which state made the most money?|invoices|deals with NULL, verifies with user that BillingState is not unique to the entire table
 3|Which type of music has the longest song?|tracks,genres|semantic meaning of "Type of song" is used to select genre table
 4|Which was the most expensive item our top employee sold?|employees,customers,invoices,invoice_items|longer chain of related entities
+5|Which genre of music has the longest song?|tracks,genres|easier test than test=3
