@@ -5,12 +5,11 @@ import subprocess
 import logging
 
 class GitLogger(logging.Logger):
-        
-        
+
     def __init__(self, log_dir, filename=None):
         self.log_dir = log_dir
         if filename is None:
-            filename = f"log{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+            filename = f"log{datetime.now().strftime('%Y-%m-%d')}.log"
         self.filename = filename
         self._fpath = Path(self.log_dir, self.filename)
         self._logger = logging.getLogger(__name__)

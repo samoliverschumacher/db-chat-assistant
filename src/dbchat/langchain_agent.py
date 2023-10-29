@@ -6,12 +6,16 @@ import pandas as pd
 from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 from langchain.chat_models import ChatOpenAI
 from langchain.agents.agent_types import AgentType
+from langchain.callbacks import FileCallbackHandler
 
 from dbchat.logger import GitLogger
 
+# pip isntall openai
+# pip install langchain-experimental
+
 
 class LangchainAgent:
-    def __init__(self, dataframes, logger: Optional[logging.Logger]=GitLogger):
+    def __init__(self, dataframes, logger: Optional[logging.Logger]=GitLogger, logfile='output.log'):
         if logger:
             self.logger = logger
 
@@ -22,11 +26,18 @@ class LangchainAgent:
             verbose=True,
             agent_type=AgentType.OPENAI_FUNCTIONS,
         )
+        self.agent.handle_parsing_errors = True
+        # TODO: design one interface for all loggers. Or make them play nicely together.
+        log_handler = FileCallbackHandler(logfile)
+        self.agent.callbacks = [log_handler]
 
     def ask(self, processed_prompt):
-        response = agent.run(processed_prompt)
+        runkwargs = {"input": processed_prompt}
+        response = self.agent.run(**runkwargs)
         if self.logger:
-            self.logger.log(processed_prompt)
-            self.logger.log(response)
+            msg = (f"Asking pandas dataframe agent..."
+                   f"{processed_prompt}"
+                   f"{response}")
+            self.logger.log(msg)
             
         return response
