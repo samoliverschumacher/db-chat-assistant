@@ -3,7 +3,7 @@ This is the most critical block of the solution that is responsible
 for turning the user prompt and matched data to generate a database query.
 """
 
-from dbchat.src import datastore
+from dbchat import datastore
 
 from typing import Protocol
 
