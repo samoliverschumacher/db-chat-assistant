@@ -7,11 +7,15 @@ does not match any data models or contains ambiguous information.
 
 import traceback
 from typing import Optional, Tuple
-from dbchat.src import datastore
-from dbchat.src.query_generation import LLMAgent
+
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
+from dbchat import datastore
+from dbchat.utils import datastore_types
+from dbchat.query_generation import LLMAgent
 
 try:
-    import sqlvalidator
+    import sqlvalidator  # type: ignore
 except ImportError:
     print("Warning: sqlvalidator is not installed.")
     
@@ -22,7 +26,7 @@ class NoAttemptsRemainingError(Exception):
 
 def offline_sql_validation(sql_query) -> Tuple[bool, str]:
     """Uses a python package to do basic offline checks on the sql statement."""
-    sql_query = sqlvalidator.parse(sql_query)
+    sql_query = sqlvalidator.parse(sql_query)  # type: ignore
     
     if not sql_query.is_valid():
         return sql_query.is_valid(), f"{sql_query.errors}"
@@ -30,19 +34,18 @@ def offline_sql_validation(sql_query) -> Tuple[bool, str]:
 
 
 def compose_data_retrieval_instruction(agent_response: str, 
-                                       datastore_type: datastore.types = datastore.types.SQL) -> str:
+                                       datastore_type: datastore_types = datastore_types.SQL) -> str:
     """
     Takes an LLM agent's raw response to a prompt that askes for a SQL snippet, 
     and processes it ready for use as a valid SQL query.
     """
     
-    if datastore_type == datastore.types.SQL:
+    if datastore_type == datastore_types.SQL:
         # trim agents response text so it only contains the SQL query
         agent_response = agent_response[agent_response.index("SELECT"): ]
         
-    elif datastore_type == datastore.types.PANDAS_AGENT:
-        # No preprocessing of the LLM prompt is required, it can go directly to the pandas agent
-        pass
+    else:
+        raise NotImplementedError(f"{datastore_type=} not supported")
         
     return agent_response
 
@@ -69,6 +72,8 @@ def iteratvely_retrieve_sql_data(sql_query: str, config: dict) -> Optional[dict]
     
     attempts_remaining = 3
     
+    sql_query = text(sql_query)
+    
     data = None
     model = None
     # Attempt to make the database call iteratively. 
@@ -80,7 +85,7 @@ def iteratvely_retrieve_sql_data(sql_query: str, config: dict) -> Optional[dict]
                                                    config)
             return data
 
-        except Exception as e:
+        except OperationalError as e:
             relevant_error_message = traceback.format_tb(e.__traceback__)[ -1 ]
             llm_feedback_prompt = ("An error occurred while executing the SQL query."
                                   f"Error: {relevant_error_message}")
@@ -98,16 +103,36 @@ def iteratvely_retrieve_sql_data(sql_query: str, config: dict) -> Optional[dict]
 
 if __name__ == '__main__':
     
-    # Convert natural language response into SQL statement, and query the database
-    config = {'connection_string': 'sqlite:///employees.db',
+    config = {'connection_string': 'sqlite:///data/chinook.db',
               'model': 'model_a'}
+    
+    #     =====     TEST: THE HAPPY PATH     =====     
+    
+    # Convert natural language response into SQL statement, and query the database
     agent_response = """
     The code below selects all rows from the employees table
     
-    SELECT * FROM employees;
+    SELECT * FROM employees LIMIT 1;
+    """
+
+    sql_query = compose_data_retrieval_instruction(agent_response)
+    data = iteratvely_retrieve_sql_data(sql_query, config)
+    # Return error messages to the user, or continue
+    print(f"Data retrieved: \n{data}")
+
+    #     =====     TEST: INCORRECT SQL STATEMENT     =====     
+    
+    raise NotImplementedError("TODO: Test incorrect SQL query.")
+    # employees_table should have been employees. LLM is expected to make this correction in the iterations
+    agent_response = """
+    The code below selects all rows from the employees table
+    
+    SELECT * FROM employees_table LIMIT 1;
     """
     
-    data = iteratvely_retrieve_sql_data(agent_response, config)
+    sql_query_excerpt = next(filter(lambda s: s.strip().startswith('SELECT '), 
+                                    agent_response.split('\n')))
+    data = iteratvely_retrieve_sql_data(sql_query_excerpt, config)
     # Return error messages to the user, or continue
-    if data is None:
-        print(f"No data returned with query:\n{agent_response}")
+    print(f"Data retrieved: \n{data}")
+    
