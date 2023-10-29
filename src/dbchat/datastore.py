@@ -3,7 +3,7 @@ from typing import Optional
 
 import pandas as pd
 
-from dbchat.src.query_generation import LLMAgent
+from dbchat.query_generation import LLMAgent
 
 try:
     from sqlalchemy import create_engine
