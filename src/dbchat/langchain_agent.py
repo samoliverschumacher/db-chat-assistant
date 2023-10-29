@@ -12,6 +12,7 @@ from dbchat.logger import GitLogger
 
 # pip isntall openai
 # pip install langchain-experimental
+# conda install -c conda-forge tabulate
 
 
 class LangchainAgent:
