@@ -3,9 +3,9 @@ from enum import Enum, auto
 from typing import Optional
 
 import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
 
-from dbchat.src.query_generation import LLMAgent
-
+# from dbchat.src.query_generation import LLMAgent
 
 try:
     from sqlalchemy import create_engine
@@ -15,29 +15,37 @@ except ImportError:
     pass
 
 
-class types(Enum):
-    SQL = auto()
-    PANDAS_AGENT = auto()
-    # DATA_RETRIEVAL_INSTRUCTIONS = auto()
+class DataEntity():
+    def __init__(self, path, title, description):
+        self.title = title
+        self.dataframe = pd.read_csv(path)
+        self.description = description
+        vectorizer = TfidfVectorizer()
+        self.entity_vector = vectorizer.fit_transform([self.description])
+    
+# class types(Enum):
+#     SQL = auto()
+#     PANDAS_AGENT = auto()
+#     # DATA_RETRIEVAL_INSTRUCTIONS = auto()
     
     
-def retrieve_from_pandas_agent(instructions: dict, model: LLMAgent) -> str:
-    """Retrieves data from a langchain pandas agent."""
-    df = pd.read_csv(instructions['data_location'])
-    result = model.ask(instructions['text'])
-    return result
+# def retrieve_from_pandas_agent(instructions: dict, model: LLMAgent) -> str:
+#     """Retrieves data from a langchain pandas agent."""
+#     df = pd.read_csv(instructions['data_location'])
+#     result = model.ask(instructions['text'])
+#     return result
 
 
-def retrieve_from_sqllite(query: str, database_connection: dict) -> Optional[dict]:
-    """Retrieves data from a sqllite database"""
+# def retrieve_from_sqllite(query: str, database_connection: dict) -> Optional[dict]:
+#     """Retrieves data from a sqllite database"""
     
-    engine = create_engine(database_connection['connection_string'])
+#     engine = create_engine(database_connection['connection_string'])
     
-    results_as_dict = None
-    with engine.begin() as connection:
-        results = connection.execute(query)
-        results_as_dict = results.mappings().all()
+#     results_as_dict = None
+#     with engine.begin() as connection:
+#         results = connection.execute(query)
+#         results_as_dict = results.mappings().all()
     
-    return results_as_dict
+#     return results_as_dict
 
     
