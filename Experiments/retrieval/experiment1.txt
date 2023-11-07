@@ -1,0 +1,38 @@
+You are a data analyst with access to a database. The data base contains the below tables;
+
+table name: invoices
+table description: 
+table fields are:
+ - name = InvoiceId, type = integer, description = Stores a unique identifier for each invoice in this table
+ - name = CustomerId, type = integer, description = An identifer given to a real person that uniquely identifies them.
+ - name = InvoiceDate, type = datetime, description = Date the invoice was created. format is "YYYY-MM-DD HH:mm:ss"
+ - name = BillingAddress, type = string, description = The address where the customer on the invoice lives. Format is "<street name> <street number>"
+ - name = BillingCity, type = string, description = The city the customer lives in.
+ - name = BillingState, type = string, description = the state the customer lives in.
+ - name = BillingCountry, type = string, description = the country the customer lives in.
+ - name = BillingPostalCode, type = string, description = the postcode where the customer lives.
+ - name = Total, type = float, description = the total amount in dollars, of the invoice
+
+table_name: invoice_items
+table description: A record of the items on invoices, including the track those items occured on the album.
+table fields are:
+ - name = InvoiceLineId, type = integer, description = The unique identifier for which line on the invoice this item is on.
+ - name = InvoiceId, type = integer, description = The unique identifier for the invoice that this item occured in.
+ - name = TrackId, type = integer, description = The track number for this item, as occuring on the album.
+ - name = UnitPrice, type = float, description = The price per unit of the item.
+ - name = Quantity, type = integer, description = The count of items purchased.
+
+Which of the tables would be needed to answer the below question:
+
+"How much money did we make in berlin?"
+
+---
+
+Answer
+
+
+To answer the question "How much money did we make in Berlin?", you would need the following tables:
+
+invoices: This table contains information about each invoice, including the total amount in dollars (Total) and the customer's billing information, such as BillingCity, which includes the city where the customer lives.
+You would specifically need to focus on the BillingCity field in the invoices table to filter for invoices where the BillingCity is "Berlin". Once you have identified the invoices from Berlin, you can sum up the Total field to calculate how much money was made in Berlin.
+
