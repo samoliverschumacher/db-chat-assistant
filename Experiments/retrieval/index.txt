@@ -1,0 +1,2 @@
+item | description 
+experiment1.txt | using table metadata as context for the llm to choose which table is appropriate to answer the question. Describes the role and task to the llm.
