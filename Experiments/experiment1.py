@@ -1,9 +1,6 @@
 from itertools import filterfalse
 import os
-from datetime import datetime
 from pathlib import Path
-import subprocess
-import logging
 
 import pandas as pd
 from dbchat.langchain_agent import LangchainAgent
@@ -11,13 +8,22 @@ from dbchat.langchain_agent import LangchainAgent
 from dbchat.logger import GitLogger as Logger
 from dbchat import ROOT_DIR
 
-        
+"""
+Tests langchain pandas agent workflow with a few exampele queries on the chinook CSV-database.
+
+Writes the results of the tests to file, and the langchain chain of thought to a log file.
+"""
+
+
 if __name__ == '__main__':
+    
+    test_single = False
+    test_multi = True
     
     log_dir = Path("Experiments", "logs", "pandas_agent")
     logger = Logger(log_dir)
     
-    os.environ["OPENAI_API_KEY"] = "api-key-goes-here"
+    os.environ["OPENAI_API_KEY"] = "YOUR API KEY"
 
     test_data_path = Path(__file__).parent / "../src/tests/data/inputs/end-to-end.csv"
     test_results_path = Path(str(test_data_path).replace('inputs', 'outputs'))
@@ -37,7 +43,6 @@ if __name__ == '__main__':
     single_table_data = list(filter(lambda r: len(r[2].split(','))==1, test_data ))
     multi_table_data = list(filterfalse(lambda r: len(r[2].split(','))==1, test_data ))
     
-    test_single = False
     if test_single:
         outputs = []
         for test_id, user_query, table, _ in single_table_data:
@@ -50,8 +55,7 @@ if __name__ == '__main__':
             print(results)
             
             outputs.append((test_id, user_query, results))
-            
-    test_multi = True
+    
     if test_multi:
         outputs = []
         test_id, user_query, tables, _ = multi_table_data[1]
@@ -73,4 +77,3 @@ if __name__ == '__main__':
     with open(test_results_path, 'a') as f:
         for test_id, user_query, results in outputs:
             f.write(f"{test_id}|{user_query}|{results}\n")
-
