@@ -1,0 +1,2 @@
+name: genres
+fields: GenreId,Name

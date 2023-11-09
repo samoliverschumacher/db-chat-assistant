@@ -1,0 +1,2 @@
+name: customers
+fields: CustomerId,FirstName,LastName,Company,Address,City,State,Country,PostalCode,Phone,Fax,Email,SupportRepId
