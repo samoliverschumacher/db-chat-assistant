@@ -1,2 +1,8 @@
 name: playlist_track
 fields: PlaylistId,TrackId
+description: |
+  table name: playlist_track
+  table description: Maps track ids to playlist ids.
+  table fields are:
+  - name = PlaylistId, type = integer, description = Stores a unique identifier for each playlist.
+  - name = TrackId, type = integer, description = A unique identifer for the track

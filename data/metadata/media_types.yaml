@@ -1,2 +1,8 @@
 name: media_types
 fields: MediaTypeId,Name
+description: |
+  table name: media_types
+  table description:
+  table fields are:
+   - name = MediaTypeId, type = integer, description = Stores a unique identifier for the media type.
+   - name = Name, type = string, description = the name of the media type

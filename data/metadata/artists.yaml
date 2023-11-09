@@ -1,2 +1,8 @@
 name: artists
 fields: ArtistId,Name
+description: |
+  table name: artists
+  table description: 
+  table fields are:
+  - name = ArtistId, type = integer, description = The unique identifier for the artist
+  - name = Name, type = string, description = The name of the artist

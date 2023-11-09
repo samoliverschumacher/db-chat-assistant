@@ -1,2 +1,11 @@
 name: invoice_items
 fields: InvoiceLineId,InvoiceId,TrackId,UnitPrice,Quantity
+description: |
+  table_name: invoice_items
+  table description: A record of the items on invoices, including the track those items occured on the album.
+  table fields are:
+  - name = InvoiceLineId, type = integer, description = The unique identifier for which line on the invoice this item is on.
+  - name = InvoiceId, type = integer, description = The unique identifier for the invoice that this item occured in.
+  - name = TrackId, type = integer, description = The track number for this item, as occuring on the album.
+  - name = UnitPrice, type = float, description = The price per unit of the item.
+  - name = Quantity, type = integer, description = The count of items purchased.
