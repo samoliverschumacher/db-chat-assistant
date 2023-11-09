@@ -23,7 +23,8 @@ if __name__ == '__main__':
     log_dir = Path("Experiments", "logs", "pandas_agent")
     logger = Logger(log_dir)
     
-    os.environ["OPENAI_API_KEY"] = "YOUR API KEY"
+    # set the API key in environment variables. export OPENAI_API_KEY=your-api-key
+    # os.environ["OPENAI_API_KEY"] = "YOUR API KEY"
 
     test_data_path = Path(__file__).parent / "../src/tests/data/inputs/end-to-end.csv"
     test_results_path = Path(str(test_data_path).replace('inputs', 'outputs'))
