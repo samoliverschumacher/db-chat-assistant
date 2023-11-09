@@ -1,0 +1,2 @@
+name: media_types
+fields: MediaTypeId,Name

@@ -17,7 +17,7 @@ DEFAULT_DIR="$(dirname "$(dirname "$(realpath "$0")")")/data"  # expecting the s
 DIR=${1:-"$DEFAULT_DIR"}  # Set default value to two directories higher than current directory in "data" folder
 
 echo "Creating metadata files in $DIR"
-exit 0
+# exit 0
 
 # Create the metadata subfolder if it doesn't exist
 mkdir -p "$DIR/metadata"
@@ -32,6 +32,7 @@ for file in "$DIR"/*.csv; do
     metadata_file="$DIR/metadata/$filename.yaml"
 
     # Create the metadata file and write the content
-    echo "name: \"$filename\"" > $metadata_file
-    echo "fields: $(head -n 1 "$file")" >> $metadata_file
+    echo "name: \"$filename\"" | sed "s/\"//g" > "$metadata_file"
+    echo -n "fields: " >> "$metadata_file"
+    head -n 1 "$file" | sed "s/\"//g" >> "$metadata_file"
 done

@@ -1,0 +1,2 @@
+name: tracks
+fields: TrackId,Name,AlbumId,MediaTypeId,GenreId,Composer,Milliseconds,Bytes,UnitPrice

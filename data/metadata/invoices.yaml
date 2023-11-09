@@ -1,0 +1,2 @@
+name: invoices
+fields: InvoiceId,CustomerId,InvoiceDate,BillingAddress,BillingCity,BillingState,BillingCountry,BillingPostalCode,Total

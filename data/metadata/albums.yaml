@@ -1,0 +1,2 @@
+name: albums
+fields: AlbumId,Title,ArtistId
