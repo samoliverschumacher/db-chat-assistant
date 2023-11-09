@@ -7,7 +7,6 @@ from dbchat.query_generation import LLMAgent
 
 try:
     from sqlalchemy import create_engine
-    from sqlalchemy.exc import SQLAlchemyError
 except ImportError:
     print( "Warning: SQLAlchemy is not installed." )
     pass
@@ -16,7 +15,6 @@ except ImportError:
 class types( Enum ):
     SQL = auto()
     PANDAS_AGENT = auto()
-    # DATA_RETRIEVAL_INSTRUCTIONS = auto()
 
 
 def retrieve_from_pandas_agent( instructions: dict, model: LLMAgent ) -> str:
