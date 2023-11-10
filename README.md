@@ -7,3 +7,24 @@ connects a database schema information to a LLM to give results without knowing 
 ---
 
 [Schematic for this system](https://app.diagrams.net/#G1JNsvPrjDpMweYzJn9UKzID2g3g04YQyP)
+
+
+# Installation
+
+## Ollama - Running LLMs locally
+
+More info here: https://python.langchain.com/docs/guides/local_llms
+
+[Install instructions from repo.](https://github.com/jmorganca/ollama)
+```
+curl https://ollama.ai/install.sh | sh
+```
+First;
+```
+ollama serve
+```
+
+In a separate terminal;
+```
+ollama run orca-mini
+```
