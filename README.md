@@ -26,3 +26,20 @@ pip install -e .[test,dev]
 ```bash
 pre-commit install
 ```
+## Ollama - Running LLMs locally
+
+More info here: https://python.langchain.com/docs/guides/local_llms
+
+[Install instructions from repo.](https://github.com/jmorganca/ollama)
+```
+curl https://ollama.ai/install.sh | sh
+```
+First;
+```
+ollama serve
+```
+
+In a separate terminal;
+```
+ollama run orca-mini
+```
