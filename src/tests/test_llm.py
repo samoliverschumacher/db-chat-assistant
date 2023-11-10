@@ -112,6 +112,8 @@
 
 # Load example user query
 
+# Initialise the encoder (llm)
+
 # Retrieve
 #     Encode the query
 
@@ -139,6 +141,6 @@
 
 
 ################################################################################################
-#           TEST SYNTHESIZED RESPONSE AGAINST HUMAN CRAFTED ANSWER - 
+#           TEST SYNTHESIZED RESPONSE - MANUAL EVALUATION
 ################################################################################################
-
+# For each query-synthesized response pair, give a "LIKE" or "DISLIKE"
