@@ -44,6 +44,7 @@ References;
 - https://pub.towardsai.net/how-to-evaluate-the-quality-of-llm-based-chatbots-ae62abe43068
 - [Ideas for evaluation methods](https://towardsdatascience.com/how-to-measure-the-success-of-your-rag-based-llm-system-874a232b27eb)
 - [LLM as judge for RAG results](https://www.databricks.com/blog/LLM-auto-eval-best-practices-RAG)
+- [Building Advanced Query Engine and Evaluation with LlamaIndex and W-B](https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy)
 
 ## Log: Concenrns on evaluation
 
