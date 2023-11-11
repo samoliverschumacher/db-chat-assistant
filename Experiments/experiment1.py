@@ -1,6 +1,7 @@
 from itertools import filterfalse
 import os
 from pathlib import Path
+import dotenv
 
 import pandas as pd
 from dbchat.langchain_agent import LangchainAgent
@@ -24,7 +25,7 @@ if __name__ == '__main__':
     logger = Logger(log_dir)
     
     # set the API key in environment variables. export OPENAI_API_KEY=your-api-key
-
+    os.environ["OPENAI_API_KEY"] = dotenv.get_key(".env", "OPENAI_API_KEY")
 
     test_data_path = Path(__file__).parent / "../src/tests/data/inputs/end-to-end.csv"
     test_results_path = Path(str(test_data_path).replace('inputs', 'outputs'))
