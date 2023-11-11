@@ -1,0 +1,8 @@
+ipykernel
+llamaindex
+python-dotenv
+openai
+langchain-experimental
+tabulate
+pandas
+sqlalchemy
