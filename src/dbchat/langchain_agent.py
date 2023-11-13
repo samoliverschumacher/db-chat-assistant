@@ -4,6 +4,7 @@ from typing import Optional
 
 import pandas as pd
 from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
+from langchain.schema.language_model import BaseLanguageModel
 from langchain.chat_models import ChatOpenAI
 from langchain.agents.agent_types import AgentType
 from langchain.callbacks import FileCallbackHandler
@@ -16,13 +17,17 @@ from dbchat.logger import GitLogger
 
 
 class LangchainAgent:
-    def __init__(self, dataframes, logger: Optional[logging.Logger]=GitLogger, logfile='output.log'):
+    def __init__(self, 
+                 dataframes, 
+                 llm: BaseLanguageModel = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613"), 
+                 logger: Optional[logging.Logger] = GitLogger, 
+                 logfile='output.log'):
         if logger:
             self.logger = logger
 
         self.dataframes = dataframes        
         self.agent = create_pandas_dataframe_agent(
-            ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613"),
+            llm,
             self.dataframes,
             verbose=True,
             agent_type=AgentType.OPENAI_FUNCTIONS,
