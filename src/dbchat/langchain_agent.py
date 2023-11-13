@@ -19,7 +19,7 @@ from dbchat.logger import GitLogger
 class LangchainAgent:
     def __init__(self, 
                  dataframes, 
-                 llm: BaseLanguageModel = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613"), 
+                 llm: BaseLanguageModel,
                  logger: Optional[logging.Logger] = GitLogger, 
                  logfile='output.log'):
         if logger:
@@ -27,7 +27,7 @@ class LangchainAgent:
 
         self.dataframes = dataframes        
         self.agent = create_pandas_dataframe_agent(
-            llm,
+            llm, #  = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
             self.dataframes,
             verbose=True,
             agent_type=AgentType.OPENAI_FUNCTIONS,
