@@ -1,0 +1,24 @@
+[project]
+name = "dbchat"
+dynamic = ["dependencies", "optional-dependencies"]
+version = "0.1.0"
+description="A database chat bot"
+license = {file = "LICENSE"}
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+readme = {file = ["README.md"]}
+
+[tool.setuptools.dynamic.optional-dependencies]
+dev = { file = ["requirements-dev.txt"] }
+test = { file = ["requirements-tests.txt"] }
+
+[tool.yapf]
+based_on_style = "google"
+# spaces_around_eq = "yes"
+NO_SPACES_AROUND_SELECTED_BINARY_OPERATORS = true
+SPACES_AROUND_SUBSCRIPT_COLON = true
+SPACES_AROUND_LIST_DELIMITERS = true
+SPACE_INSIDE_BRACKETS = true
+COLUMN_LIMIT = 110
+SPACES_AROUND_DEFAULT_OR_NAMED_ASSIGN = true
