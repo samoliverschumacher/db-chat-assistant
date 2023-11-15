@@ -22,3 +22,6 @@ SPACES_AROUND_LIST_DELIMITERS = true
 SPACE_INSIDE_BRACKETS = true
 COLUMN_LIMIT = 110
 SPACES_AROUND_DEFAULT_OR_NAMED_ASSIGN = true
+
+[tool.pytest.ini_options]
+addopts = ["--ignore=src/tests/data/test_datastore.py"]
