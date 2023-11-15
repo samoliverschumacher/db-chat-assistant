@@ -1,0 +1,20 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace  # Remove trailing whitespace
+      - id: end-of-file-fixer  # ensures that a file is either empty, or ends with one newline
+      - id: check-merge-conflict  # Prevent committing if a merge conflict is unresolved
+      - id: check-yaml  # Ensure YAML files are valid
+      - id: check-json  # Ensure JSON files are parsable
+        args: [ --unsafe ]
+      - id: mixed-line-ending  # CRLF is a vulnerability, fix before commit
+        args: ['--fix=lf']
+  # - repo: https://github.com/pycqa/flake8
+  #   rev: '6.1.0'
+  #   hooks:
+  #     - id: flake8
+  - repo: https://github.com/google/yapf
+    rev: 'v0.40.2'
+    hooks:
+      - id: yapf
