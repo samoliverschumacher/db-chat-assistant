@@ -1,0 +1,11 @@
+# Separate envrionment for this repo;
+# conda deactivate
+# conda env create -f environment.yml
+name: dbchat
+
+channels:
+- conda-forge
+
+dependencies:
+  - python>=3.10,<3.11
+  - pip
