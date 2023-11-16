@@ -17,17 +17,17 @@ from dbchat.logger import GitLogger
 
 
 class LangchainAgent:
-    def __init__(self, 
-                 dataframes, 
-                 llm: BaseLanguageModel,
-                 logger: Optional[logging.Logger] = GitLogger, 
-                 logfile='output.log'):
-        if logger:
-            self.logger = logger
 
-        self.dataframes = dataframes        
+    def __init__(self,
+                 dataframes,
+                 llm: BaseLanguageModel,
+                 logger: Optional[logging.Logger] = None,
+                 logfile='output.log'):
+        self.logger = logger
+
+        self.dataframes = dataframes
         self.agent = create_pandas_dataframe_agent(
-            llm, #  = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
+            llm,  #  = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
             self.dataframes,
             verbose=True,
             agent_type=AgentType.OPENAI_FUNCTIONS,
@@ -40,10 +40,10 @@ class LangchainAgent:
     def ask(self, processed_prompt):
         runkwargs = {"input": processed_prompt}
         response = self.agent.run(**runkwargs)
-        if self.logger:
+        if self.logger is not None:
             msg = (f"Asking pandas dataframe agent..."
                    f"{processed_prompt}"
                    f"{response}")
-            self.logger.log(msg)
-            
+            self.logger.log(logging.INFO, msg)
+
         return response

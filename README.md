@@ -79,7 +79,7 @@ Add a new table to the database that contains a row for each table's metadata
        DESCRIPTION TEXT
    );
 > .mode csv
-> .import table_descriptions.csv table_descriptions
+> .import '| tail -n +2 data/table_descriptions.csv' table_descriptions
 > SELECT * FROM table_descriptions;
 ```
 
