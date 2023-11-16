@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import logging
 
+
 class GitLogger(logging.Logger):
 
     def __init__(self, log_dir, filename=None):
@@ -19,20 +20,21 @@ class GitLogger(logging.Logger):
     def setup_file_handler(self):
         self._fpath.parent.mkdir(exist_ok=True)
         file_handler = logging.FileHandler(self._fpath)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter(
+            '%(asctime)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
         self._logger.addHandler(file_handler)
 
-
     def get_git_user_name(self):
         try:
-            result = subprocess.run(['git', 'config', 'user.name'], capture_output=True, text=True)
+            result = subprocess.run(['git', 'config', 'user.name'],
+                                    capture_output=True,
+                                    text=True)
             return result.stdout.strip()
         except subprocess.CalledProcessError:
             return "Unknown"
 
-    def log(self, message, level=logging.INFO):
+    def log(self, level=logging.INFO, message=""):
         git_user_name = self.get_git_user_name()
         formatted_message = f"{git_user_name} - {message}"
         self._logger.log(level, formatted_message)
-        
