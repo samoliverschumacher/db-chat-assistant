@@ -15,7 +15,7 @@ connects a database schema information to a LLM to give results without knowing 
 
 Create environment (is langauge agnostic, tools like pip to install python deps)
 ```bash
-conda install --file=environment.yml
+conda env create -f environment.yml
 ```
 
 Instal python deps, including development and test related dependencies
