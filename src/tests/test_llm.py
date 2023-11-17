@@ -105,10 +105,14 @@
 ################################################################################################
 #           TEST SYNTHESIZED RESPONSE AGAINST HUMAN CRAFTED ANSWER - LLM AS JUDGE
 ################################################################################################
+# NOTE: https://gpt-index.readthedocs.io/en/v0.6.32/examples/index_structs/struct_indices/SQLIndexDemo.html
+# SQL database queries
+
+from typing import List, Tuple
 from langchain.embeddings import OllamaEmbeddings
 from langchain.llms.ollama import Ollama as LangchainOllama
 from llama_index.llms import Ollama
-from llama_index import ServiceContext, set_global_service_context
+from llama_index import Document, ServiceContext, set_global_service_context
 from llama_index import VectorStoreIndex
 from llama_index import download_loader
 import pandas as pd
@@ -141,7 +145,8 @@ input_query = test_data[0][1]
 expected_tables = test_data[0][2].split(',')
 
 
-def load_metadata_from_sqllite(db_path):
+def load_metadata_from_sqllite(
+        db_path) -> Tuple[List[Document], List[Document]]:
     DatabaseReader = download_loader("DatabaseReader")
 
     engine = create_engine(f"sqlite:///{db_path}")
@@ -162,17 +167,20 @@ def load_metadata_from_sqllite(db_path):
     return document_descriptions, document_names
 
 
+# Initialise the encoder (llm)
+llm_llama2 = Ollama(model="llama2")
+ollama_emb = OllamaEmbeddings(model="orca-mini")  # type: ignore
+ctx = ServiceContext.from_defaults(llm=llm_llama2, embed_model=ollama_emb)
+set_global_service_context(ctx)
+
+# Load the documents
 documents, document_names = load_metadata_from_sqllite(db_path)
 document_map = {
     doc.id_: docname.text
     for docname, doc in zip(document_names, documents)
 }
 
-# Initialise the encoder (llm)
-llm_orcamini = Ollama(model="orca-mini")
-ollama_emb = OllamaEmbeddings(model="orca-mini")  # type: ignore
-ctx = ServiceContext.from_defaults(llm=llm_orcamini, embed_model=ollama_emb)
-set_global_service_context(ctx)
+# Index the documents
 orcamini_index = VectorStoreIndex.from_documents(documents,
                                                  service_context=ctx)
 retriever = orcamini_index.as_retriever()
@@ -206,11 +214,10 @@ for table in context_tables:
     frames.append(df)
 
 # Get the LLMs response
-from langchain.chat_models import ChatOpenAI
-
-llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
-agent = LangchainAgent(dataframes=frames, llm=llm)  # type: ignore
-#    llm=LangchainOllama(model="orca-mini"))  # type: ignore
+# from langchain.chat_models import ChatOpenAI
+# llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
+agent = LangchainAgent(dataframes=frames,
+                       llm=LangchainOllama(model="llama2"))  # type: ignore
 response = agent.ask(input_query)
 
 # Compose a prompt with the original query and the synthesized response for the "Judge" LLM
@@ -231,8 +238,9 @@ Assistant:"""
 print(f"{SYSTEM_PROMPT=}")
 
 # Get a score for the user query from the "Judge" LLM
-llm = Ollama(model="orca-mini")
-evaluation = llm.complete(SYSTEM_PROMPT)
+# llm = Ollama(model="orca-mini")
+# evaluation = llm.complete(SYSTEM_PROMPT)
+evaluation = llm_llama2.complete(SYSTEM_PROMPT)
 # Save the score and the explanation of the score to file.
 print(f"{evaluation=}")
 

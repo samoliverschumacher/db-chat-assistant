@@ -27,8 +27,8 @@ class LangchainAgent:
 
         self.dataframes = dataframes
         self.agent = create_pandas_dataframe_agent(
-            llm,  #  = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
-            self.dataframes,
+            llm=llm,  #  = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
+            df=self.dataframes,
             verbose=True,
             agent_type=AgentType.OPENAI_FUNCTIONS,
         )
