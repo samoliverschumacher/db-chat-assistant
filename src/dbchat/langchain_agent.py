@@ -3,12 +3,14 @@ import os
 from typing import Optional
 
 import pandas as pd
-from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
-from langchain.schema.language_model import BaseLanguageModel
-from langchain.chat_models import ChatOpenAI
 from langchain.agents.agent_types import AgentType
 from langchain.callbacks import FileCallbackHandler
+from langchain.chat_models import ChatOpenAI
+from langchain.llms.ollama import Ollama as LangchainOllama
+from langchain.schema.language_model import BaseLanguageModel
+from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 
+from dbchat import datastore
 from dbchat.logger import GitLogger
 
 # pip isntall openai
@@ -47,3 +49,23 @@ class LangchainAgent:
             self.logger.log(logging.INFO, msg)
 
         return response
+
+
+def pandas_langchain_agent(cfg, context_tables):
+    # load pandas dataframes from data directory, for each context_table
+    frames = []
+    for table_name in context_tables:
+        rows = datastore.retrieve_from_sqllite(f"SELECT * FROM {table_name}",
+                                               cfg['database']['path'])
+        frames.append(pd.DataFrame(rows))
+
+    # Get the LLMs response
+    # from langchain.chat_models import ChatOpenAI
+    # llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
+    if cfg['llm']['class'] == "ollama":
+        agent = LangchainAgent(
+            dataframes=frames,
+            llm=LangchainOllama(model=cfg['llm']['name']))  # type: ignore
+    else:
+        raise ValueError(f"Unknown LLM: {cfg['llm']}")
+    return agent
