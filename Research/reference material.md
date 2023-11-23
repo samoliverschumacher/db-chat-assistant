@@ -28,3 +28,11 @@ This package connects to SOTA models. It's well documented, provides an alternat
 
 ## Review of Todays models
 
+
+## Frameworks
+
+MLFLow: "MLflow LLM Evaluate"
+- Supports many types of evaluation methods
+- View wevaluation results via MLflow UI
+- Prompt engineering UI 
+- [Recording, and Tracking runs and artefacts](https://mlflow.org/docs/latest/tracking.html#how-runs-and-artifacts-are-recorded). (MLflow on localhost, MLflow on localhost with SQLite, MLflow on localhost with Tracking Server, etc.)
