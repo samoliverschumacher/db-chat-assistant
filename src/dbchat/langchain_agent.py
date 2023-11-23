@@ -18,18 +18,19 @@ from dbchat.logger import GitLogger
 # conda install -c conda-forge tabulate
 
 
-class LangchainAgent:
+class PandasLangchainAgent:
 
     def __init__(self,
                  dataframes,
-                 llm: BaseLanguageModel,
+                 llm: BaseLanguageModel = ChatOpenAI(
+                     temperature=0, model="gpt-3.5-turbo-0613"),
                  logger: Optional[logging.Logger] = None,
                  logfile='output.log'):
         self.logger = logger
 
         self.dataframes = dataframes
         self.agent = create_pandas_dataframe_agent(
-            llm=llm,  #  = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
+            llm=llm,
             df=self.dataframes,
             verbose=True,
             agent_type=AgentType.OPENAI_FUNCTIONS,
@@ -49,23 +50,3 @@ class LangchainAgent:
             self.logger.log(logging.INFO, msg)
 
         return response
-
-
-def pandas_langchain_agent(cfg, context_tables):
-    # load pandas dataframes from data directory, for each context_table
-    frames = []
-    for table_name in context_tables:
-        rows = datastore.retrieve_from_sqllite(f"SELECT * FROM {table_name}",
-                                               cfg['database']['path'])
-        frames.append(pd.DataFrame(rows))
-
-    # Get the LLMs response
-    # from langchain.chat_models import ChatOpenAI
-    # llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
-    if cfg['llm']['class'] == "ollama":
-        agent = LangchainAgent(
-            dataframes=frames,
-            llm=LangchainOllama(model=cfg['llm']['name']))  # type: ignore
-    else:
-        raise ValueError(f"Unknown LLM: {cfg['llm']}")
-    return agent
