@@ -1,3 +1,6 @@
+# import dotenv
+# dotenv.load_dotenv(ROOT_DIR.parent.parent / '.env')
+
 from langchain.embeddings import OllamaEmbeddings
 from langchain.chat_models import ChatOpenAI
 from llama_index.indices.struct_store.sql_query import NLSQLTableQueryEngine
@@ -10,7 +13,7 @@ from llama_index.objects import (
     SQLTableSchema,
 )
 from llama_index import LLMPredictor, SQLDatabase, ServiceContext, VectorStoreIndex, set_global_service_context
-from sqlalchemy import create_engine
+from sqlalchemy import Table, create_engine
 from sqlalchemy import MetaData
 
 from dbchat import ROOT_DIR
@@ -81,3 +84,70 @@ def run(cfg, input_query, SYSTEM_PROMPT="{input_query}"):
         single_response: str = responses[0]
         return single_response
     return responses
+
+
+if __name__ == '__main__':
+
+    DATA_DIR = ROOT_DIR.parent.parent / "data"
+    db_path = str(DATA_DIR / "chinook.db")
+
+    from llama_index.indices.struct_store.sql_query import (
+        SQLTableRetrieverQueryEngine, )
+    from llama_index.objects import (
+        SQLTableNodeMapping,
+        ObjectIndex,
+        SQLTableSchema,
+    )
+    from sqlalchemy import MetaData
+    from sqlalchemy import create_engine, inspect
+
+    from llama_index import VectorStoreIndex, SQLDatabase, LLMPredictor, set_global_service_context, ServiceContext
+
+    from langchain.embeddings import OllamaEmbeddings
+    from llama_index.llms import Ollama
+
+    # Initialise the encoder
+    embedding_model = OllamaEmbeddings(model="llama2")
+
+    # Initialise the llm
+    llm = Ollama(model="llama2")
+    llm_predictor = LLMPredictor(llm=llm)
+
+    ctx = ServiceContext.from_defaults(embed_model=embedding_model,
+                                       llm_predictor=llm_predictor)
+    set_global_service_context(ctx)
+
+    engine = create_engine(f"sqlite:///{db_path}")
+    inspection = inspect(engine)
+    all_table_names = inspection.get_table_names()
+
+    metadata_obj = MetaData()
+
+    for table_name in all_table_names:
+        table = Table(table_name, metadata_obj, autoload_with=engine)
+    metadata_obj.create_all(engine)
+
+    sql_database = SQLDatabase(engine, include_tables=all_table_names)
+
+    # Construct Object Index
+    table_node_mapping = SQLTableNodeMapping(sql_database)
+    table_schema_objs = [(SQLTableSchema(table_name=t))
+                         for t in sql_database.get_usable_table_names()
+                         ]  # add a SQLTableSchema for each table
+    obj_index = ObjectIndex.from_objects(
+        table_schema_objs,
+        table_node_mapping,
+        VectorStoreIndex,
+    )
+    retriever = obj_index.as_retriever(similarity_top_k=4)
+
+    query_engine = SQLTableRetrieverQueryEngine(sql_database,
+                                                retriever,
+                                                service_context=ctx)
+
+    input_query = "How much money did Berlin make?"
+    response = query_engine.query(input_query)
+    print(response)
+
+    retrieved_tables = query_engine.sql_retriever._get_tables(input_query)
+    print(f"With {input_query=}, {retrieved_tables=}")
