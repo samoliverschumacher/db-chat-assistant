@@ -46,7 +46,7 @@ References;
 - [LLM as judge for RAG results](https://www.databricks.com/blog/LLM-auto-eval-best-practices-RAG)
 - [Building Advanced Query Engine and Evaluation with LlamaIndex and W-B](https://wandb.ai/ayush-thakur/llama-index-report/reports/Building-Advanced-Query-Engine-and-Evaluation-with-LlamaIndex-and-W-B--Vmlldzo0OTIzMjMy)
 
-## Log: Concenrns on evaluation
+## Log
 
 ### 1/11/23
 A user query used to match to a vector of documents (metadata of a table description), might not be the right solution to the problem.
@@ -54,3 +54,7 @@ A user query used to match to a vector of documents (metadata of a table descrip
 Need to mimic the way human does it.
     "which df is the query related to?"
  - We look at table names, and table column names.
+
+
+TODO: Add info on faithfulness, and its metrics. (urls, dot points, etc.)
+TODO: Add info on Copy mechanism. (urls, dot points, etc.)
