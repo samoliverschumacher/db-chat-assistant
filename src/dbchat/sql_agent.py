@@ -1,122 +1,17 @@
-# import dotenv
-# dotenv.load_dotenv(ROOT_DIR.parent.parent / '.env')
-
 from langchain.embeddings import OllamaEmbeddings
-from langchain.chat_models import ChatOpenAI
-from llama_index.indices.struct_store.sql_query import NLSQLTableQueryEngine
-from llama_index.indices.struct_store.sql_query import (
-    SQLTableRetrieverQueryEngine, )
+from llama_index import (LLMPredictor, ServiceContext, SQLDatabase,
+                         VectorStoreIndex, set_global_service_context)
 from llama_index.llms import Ollama
-from llama_index.objects import (
-    SQLTableNodeMapping,
-    ObjectIndex,
-    SQLTableSchema,
-)
-from llama_index import LLMPredictor, SQLDatabase, ServiceContext, VectorStoreIndex, set_global_service_context
-from sqlalchemy import Table, create_engine
-from sqlalchemy import MetaData
+from llama_index.objects import (ObjectIndex, SQLTableNodeMapping,
+                                 SQLTableSchema)
+from sqlalchemy import MetaData, Table, create_engine, inspect
 
 from dbchat import ROOT_DIR
+from dbchat.models.reranking import sql_query_engine_with_reranking
 
 
-def _known_tables(tables, sql_database, query):
-    query_engine = NLSQLTableQueryEngine(
-        sql_database=sql_database,
-        tables=tables,
-    )
-    query_str = query
-    response = query_engine.query(query_str)
-    return response
-
-
-def run(cfg, input_query, SYSTEM_PROMPT="{input_query}"):
-
-    input_querys = [input_query
-                    ] if not isinstance(input_query, list) else input_query
-
-    engine = create_engine(cfg['database']['path'])
-    metadata_obj = MetaData()
-
-    sql_database = SQLDatabase(engine)
-
-    # set Logging to DEBUG for more detailed outputs
-    table_node_mapping = SQLTableNodeMapping(sql_database)
-    table_schema_objs = [
-        (SQLTableSchema(table_name=t.name)) for t in metadata_obj.sorted_tables
-    ]  # add a SQLTableSchema for each table
-
-    # Initialise the encoder
-    if cfg['index']['class'] == "ollama":
-        embedding_model = OllamaEmbeddings(model=cfg['index']['name'])
-    else:
-        embedding_model = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
-
-    # Initialise the llm
-    if cfg['llm']['class'] == "ollama":
-        llm = Ollama(model=cfg['llm']['name'])
-    else:
-        llm = ChatOpenAI(temperature=0, model="gpt-3.5-turbo-0613")
-
-    llm_predictor = LLMPredictor(llm=llm)
-    ctx = ServiceContext.from_defaults(embed_model=embedding_model,
-                                       llm_predictor=llm_predictor)
-    set_global_service_context(ctx)
-
-    obj_index = ObjectIndex.from_objects(
-        table_schema_objs,
-        table_node_mapping,
-        VectorStoreIndex,
-    )
-    retriever = obj_index.as_retriever(similarity_top_k=1)
-
-    query_engine = SQLTableRetrieverQueryEngine(sql_database,
-                                                retriever,
-                                                service_context=ctx)
-
-    input_querys = [input_query
-                    ] if not isinstance(input_query, list) else input_query
-    responses = []
-    for input_query in input_querys:
-        SYSTEM_PROMPT = SYSTEM_PROMPT.format(input_query=input_query)
-        responses.append(query_engine.query(SYSTEM_PROMPT))
-
-    if len(responses) == 1:
-        single_response: str = responses[0]
-        return single_response
-    return responses
-
-
-if __name__ == '__main__':
-
-    DATA_DIR = ROOT_DIR.parent.parent / "data"
-    db_path = str(DATA_DIR / "chinook.db")
-
-    from llama_index.indices.struct_store.sql_query import (
-        SQLTableRetrieverQueryEngine, )
-    from llama_index.objects import (
-        SQLTableNodeMapping,
-        ObjectIndex,
-        SQLTableSchema,
-    )
-    from sqlalchemy import MetaData
-    from sqlalchemy import create_engine, inspect
-
-    from llama_index import VectorStoreIndex, SQLDatabase, LLMPredictor, set_global_service_context, ServiceContext
-
-    from langchain.embeddings import OllamaEmbeddings
-    from llama_index.llms import Ollama
-
-    # Initialise the encoder
-    embedding_model = OllamaEmbeddings(model="llama2")
-
-    # Initialise the llm
-    llm = Ollama(model="llama2")
-    llm_predictor = LLMPredictor(llm=llm)
-
-    ctx = ServiceContext.from_defaults(embed_model=embedding_model,
-                                       llm_predictor=llm_predictor)
-    set_global_service_context(ctx)
-
+def get_sql_database(db_path, kwargs={}):
+    """Get the SQL database."""
     engine = create_engine(f"sqlite:///{db_path}")
     inspection = inspect(engine)
     all_table_names = inspection.get_table_names()
@@ -124,30 +19,85 @@ if __name__ == '__main__':
     metadata_obj = MetaData()
 
     for table_name in all_table_names:
-        table = Table(table_name, metadata_obj, autoload_with=engine)
+        _ = Table(table_name, metadata_obj, autoload_with=engine)
     metadata_obj.create_all(engine)
 
-    sql_database = SQLDatabase(engine, include_tables=all_table_names)
+    sql_database = SQLDatabase(engine,
+                               include_tables=all_table_names,
+                               **kwargs)
+    return sql_database
+
+
+if __name__ == '__main__':
+
+    DATA_DIR = ROOT_DIR.parent.parent / "data"
+    db_path = str(DATA_DIR / "chinook.db")
+
+    # Initialise the encoder with a deterministic model
+    embedding_model = OllamaEmbeddings(model="llama2reranker")
+
+    # Initialise the llm for querying
+    llm = Ollama(model="llama2")
+    llm_predictor = LLMPredictor(llm=llm)
+
+    service_context = ServiceContext.from_defaults(embed_model=embedding_model,
+                                                   llm_predictor=llm_predictor)
+    set_global_service_context(service_context)
+
+    sql_database = get_sql_database(db_path)
 
     # Construct Object Index
     table_node_mapping = SQLTableNodeMapping(sql_database)
-    table_schema_objs = [(SQLTableSchema(table_name=t))
-                         for t in sql_database.get_usable_table_names()
-                         ]  # add a SQLTableSchema for each table
+    context_str = ""  # BUG: retrieval in 0.9.8 requires context to be set in the metadata
+    table_schema_objs = [
+        (SQLTableSchema(table_name=t, context_str=context_str))
+        for t in sql_database.get_usable_table_names()
+    ]  # add a SQLTableSchema for each table
     obj_index = ObjectIndex.from_objects(
         table_schema_objs,
         table_node_mapping,
         VectorStoreIndex,
     )
     retriever = obj_index.as_retriever(similarity_top_k=4)
-
-    query_engine = SQLTableRetrieverQueryEngine(sql_database,
-                                                retriever,
-                                                service_context=ctx)
+    # Patch the SQLTableRetrieverQueryEngine, with reranking
+    query_engine = sql_query_engine_with_reranking(sql_database, retriever,
+                                                   service_context)
 
     input_query = "How much money did Berlin make?"
     response = query_engine.query(input_query)
-    print(response)
-
+    print(f"{input_query=}"
+          ""
+          f"{response=}"
+          f"{response.metadata['sql_query']}")
     retrieved_tables = query_engine.sql_retriever._get_tables(input_query)
-    print(f"With {input_query=}, {retrieved_tables=}")
+    print(f"{retrieved_tables=}")
+
+from llama_index.postprocessor import LLMRerank
+
+
+def doc_query_fusion_retriever(obj_index):
+    """Creates a fusioun retriver.
+    
+    A Fusion retriver blends multiple retrievers by synthesising multiple 
+    similar queries to the input query, and combining their retrieval results.
+    See: https://github.com/Raudaschl/rag-fusion.
+    """
+    from llama_index.retrievers import BM25Retriever, QueryFusionRetriever
+    from llama_index.retrievers.fusion_retriever import FUSION_MODES
+
+    # create your retrievers
+    sql_retriever = obj_index.as_retriever(similarity_top_k=2)
+    bm25_retriever = BM25Retriever.from_defaults(docstore=obj_index.docstore,
+                                                 similarity_top_k=2)
+
+    # create your fusion retriever
+    retriever = QueryFusionRetriever(
+        [sql_retriever, bm25_retriever],
+        similarity_top_k=2,
+        num_queries=4,  # set this to 1 to disable query generation
+        mode=FUSION_MODES.RECIPROCAL_RANK,
+        use_async=True,
+        verbose=True,
+        # query_gen_prompt="...",  # we could override the query generation prompt here
+    )
+    return retriever
