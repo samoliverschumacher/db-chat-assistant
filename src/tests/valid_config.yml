@@ -1,0 +1,19 @@
+appproach: "sql_engine_w_reranking"
+database:
+  path: "sqlite:///data/chinook.db"
+  metadata:
+    metadata_path: "sqlite:///data/chinook.db"
+    table_name: "table_descriptions"
+    document_id_like: "%-1"
+index:
+  name: "llama2reranker"
+  class: "ollama"
+  retriever_kwargs:
+    similarity_top_k: 4
+  reranking:
+    config_object: ReRankerLLMConfig
+    reranker_kwargs:
+      top_n: 3
+llm:
+  name: "llama2"
+  class: "ollama"
