@@ -82,15 +82,26 @@ class ReRankerLLMConfig:
     model = 'ollama:llama2reranker'
 
 
+reranker_configs = {'ReRankerLLMConfig': ReRankerLLMConfig}
+
+
 def sql_query_engine_with_reranking(
     sql_database,
     retriever,
     service_context,
-    config=ReRankerLLMConfig,
+    config: Optional[dict] = None,
     llm_reranker: Optional[BaseLLMPredictor] = None
 ) -> SQLTableRetrieverQueryEngine:
     """
-    Creates a SQL query engine with llm-reranking.
+    Creates a SQL query engine with llm-reranking. 
+    
+    Expects config with structure;
+    ```yaml
+    reranking:
+        config_object: ReRankerLLMConfig
+        reranker_kwargs:
+        top_n: 3
+    ```
     
     Defaults to using an Ollama model for LLM reranking. 
      - Requires a llm configured to be deterministic.
@@ -100,7 +111,7 @@ def sql_query_engine_with_reranking(
     Uses a parsing function to parse out the ranked documents from the LLM response.
      - Parsing function depends on the prompt given to the reranker, and the LLM model's 
        ability to adhere to the prompts required answer format.
-    
+       
     Args:
         sql_database (SQLDatabase): The SQL database to be queried.
         retriever (NLSQLRetriever): The retriever used to retrieve SQL table schemas.
@@ -109,28 +120,35 @@ def sql_query_engine_with_reranking(
     Returns:
         SQLTableRetrieverQueryEngine: The SQL query engine with reranking.
     """
-
+    # Load the config if not provided
+    if config is None:
+        reranker_config = ReRankerLLMConfig
+        config = {'reranking': {'reranker_kwargs': {"top_n": 3}}}
+    else:
+        reranker_config = reranker_configs[config['reranking']
+                                           ['config_object']]
+    # Check the type of the retriever
     assert type(retriever._object_node_mapping
                 ) == llama_index.objects.table_node_mapping.SQLTableNodeMapping
     assert type(
         retriever._retriever
     ) == llama_index.indices.vector_store.retrievers.retriever.VectorIndexRetriever
 
-    # Initialise the llm, to overwrite service context
+    # Initialise the LLM, to overwrite service context
     if llm_reranker is not None:
         llm = llm_reranker
     else:
-        model_source, _, model_name = config.model.partition(':')
+        model_source, _, model_name = reranker_config.model.partition(':')
         llm = Ollama(model=model_name)
 
     llm_predictor = LLMPredictor(llm=llm)
     service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor)
 
     postprocessor = LLMRerank(
-        top_n=3,
+        top_n=config['reranking']['reranker_kwargs']['top_n'],
         service_context=service_context,
-        choice_select_prompt=config.prompt_template,
-        parse_choice_select_answer_fn=config.response_parser)
+        choice_select_prompt=reranker_config.prompt_template,
+        parse_choice_select_answer_fn=reranker_config.response_parser)
 
     # Need to postprocerss result of retrieve with the document re-ranking step.
     original_retrieve_fn = retriever._retriever.retrieve

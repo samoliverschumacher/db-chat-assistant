@@ -1,78 +1,16 @@
+from collections import defaultdict
 from langchain.embeddings import OllamaEmbeddings
 from llama_index import (LLMPredictor, ServiceContext, SQLDatabase,
                          VectorStoreIndex, set_global_service_context)
 from llama_index.llms import Ollama
 from llama_index.objects import (ObjectIndex, SQLTableNodeMapping,
                                  SQLTableSchema)
-from sqlalchemy import MetaData, Table, create_engine, inspect
+from sqlalchemy import DDL, MetaData, Table, create_engine, inspect
+import yaml
 
 from dbchat import ROOT_DIR
+from dbchat.datastore import load_metadata_from_db
 from dbchat.models.reranking import sql_query_engine_with_reranking
-
-
-def get_sql_database(db_path, kwargs={}):
-    """Get the SQL database."""
-    engine = create_engine(f"sqlite:///{db_path}")
-    inspection = inspect(engine)
-    all_table_names = inspection.get_table_names()
-
-    metadata_obj = MetaData()
-
-    for table_name in all_table_names:
-        _ = Table(table_name, metadata_obj, autoload_with=engine)
-    metadata_obj.create_all(engine)
-
-    sql_database = SQLDatabase(engine,
-                               include_tables=all_table_names,
-                               **kwargs)
-    return sql_database
-
-
-if __name__ == '__main__':
-
-    DATA_DIR = ROOT_DIR.parent.parent / "data"
-    db_path = str(DATA_DIR / "chinook.db")
-
-    # Initialise the encoder with a deterministic model
-    embedding_model = OllamaEmbeddings(model="llama2reranker")
-
-    # Initialise the llm for querying
-    llm = Ollama(model="llama2")
-    llm_predictor = LLMPredictor(llm=llm)
-
-    service_context = ServiceContext.from_defaults(embed_model=embedding_model,
-                                                   llm_predictor=llm_predictor)
-    set_global_service_context(service_context)
-
-    sql_database = get_sql_database(db_path)
-
-    # Construct Object Index
-    table_node_mapping = SQLTableNodeMapping(sql_database)
-    context_str = ""  # BUG: retrieval in 0.9.8 requires context to be set in the metadata
-    table_schema_objs = [
-        (SQLTableSchema(table_name=t, context_str=context_str))
-        for t in sql_database.get_usable_table_names()
-    ]  # add a SQLTableSchema for each table
-    obj_index = ObjectIndex.from_objects(
-        table_schema_objs,
-        table_node_mapping,
-        VectorStoreIndex,
-    )
-    retriever = obj_index.as_retriever(similarity_top_k=4)
-    # Patch the SQLTableRetrieverQueryEngine, with reranking
-    query_engine = sql_query_engine_with_reranking(sql_database, retriever,
-                                                   service_context)
-
-    input_query = "How much money did Berlin make?"
-    response = query_engine.query(input_query)
-    print(f"{input_query=}"
-          ""
-          f"{response=}"
-          f"{response.metadata['sql_query']}")
-    retrieved_tables = query_engine.sql_retriever._get_tables(input_query)
-    print(f"{retrieved_tables=}")
-
-from llama_index.postprocessor import LLMRerank
 
 
 def doc_query_fusion_retriever(obj_index):
@@ -101,3 +39,124 @@ def doc_query_fusion_retriever(obj_index):
         # query_gen_prompt="...",  # we could override the query generation prompt here
     )
     return retriever
+
+
+def get_sql_database(db_path, kwargs={}):
+    """Get the SQL database."""
+    engine = create_engine(db_path)
+    inspection = inspect(engine)
+    all_table_names = inspection.get_table_names()
+
+    metadata_obj = MetaData()
+
+    for table_name in all_table_names:
+        _ = Table(table_name, metadata_obj, autoload_with=engine)
+    metadata_obj.create_all(engine)
+
+    sql_database = SQLDatabase(engine,
+                               include_tables=all_table_names,
+                               **kwargs)
+    return sql_database
+
+
+from sqlalchemy import create_engine, text
+
+
+def load_table_descriptions(config: dict, table_names: list):
+    """
+    Expects config with structure;
+    metadata:
+        metadata_path: "sqlite:///data/chinook.db"
+        table_name: "table_descriptions"
+        document_id_like: "%-1"
+    """
+    # Connect to the metadata database
+    engine = create_engine(config['metadata_path'])
+
+    # Prepare the query
+    placeholders = ",".join(
+        [":param" + str(i) for i in range(len(table_names))])
+    query = f"SELECT TABLE_NAME, DESCRIPTION FROM {config['table_name']} WHERE TABLE_NAME IN ({placeholders}) AND DOCUMENT_ID LIKE :like"
+
+    # Prepare parameters
+    params = {
+        "param" + str(i): table_names[i]
+        for i in range(len(table_names))
+    }
+    params["like"] = config['document_id_like']
+
+    # Debugging statement
+    debug_query = query
+    for key, value in params.items():
+        debug_query = debug_query.replace(':' + key, "'" + str(value) + "'")
+    print(f"Debugging Query: {debug_query}")
+
+    # Execute the query
+    with engine.connect() as conn:
+        results = conn.execute(text(query), params)
+
+    # Create a dictionary of results
+    table_descriptions = {row[0]: row[1] for row in results}
+    return table_descriptions
+
+
+def get_retriever(sql_database, config: dict):
+    # Construct Object Index
+    table_node_mapping = SQLTableNodeMapping(sql_database)
+    table_names = sql_database.get_usable_table_names()
+    # Load a context string for each of the tables, by querying the table metadata
+    # from the database path provided in config
+    table_descriptions = load_table_descriptions(
+        config['database']['metadata'], table_names)
+
+    # add a SQLTableSchema for each table
+    table_schema_objs = [
+        (SQLTableSchema(table_name=t,
+                        context_str=table_descriptions.get(t, "")))
+        for t in table_names
+    ]
+    obj_index = ObjectIndex.from_objects(
+        table_schema_objs,
+        table_node_mapping,
+        VectorStoreIndex,
+    )
+    retriever = obj_index.as_retriever(**config['index']['retriever_kwargs'])
+    return retriever
+
+
+if __name__ == '__main__':
+
+    with open(ROOT_DIR.parent / "tests/data/inputs/cfg_3.yml") as f:
+        config = yaml.safe_load(f)
+
+    DATA_DIR = ROOT_DIR.parent.parent / "data"
+    db_path = str(DATA_DIR / "chinook.db")
+    db_path = config['database']['path']
+
+    # Initialise the encoder with a deterministic model
+    embedding_model = OllamaEmbeddings(model=config['index']['name'])
+    # Initialise the llm for querying
+    llm = Ollama(model=config['llm']['name'])
+    llm_predictor = LLMPredictor(llm=llm)
+
+    service_context = ServiceContext.from_defaults(embed_model=embedding_model,
+                                                   llm_predictor=llm_predictor)
+    set_global_service_context(service_context)
+
+    sql_database = get_sql_database(db_path)
+    retriever = get_retriever(sql_database, config)
+
+    # Patch the SQLTableRetrieverQueryEngine, with reranking
+    query_engine = sql_query_engine_with_reranking(sql_database, retriever,
+                                                   service_context,
+                                                   config['index'])
+
+    input_query = "How much money did Berlin make?"
+    response = query_engine.query(input_query)
+    print(f"{input_query=}"
+          "\n"
+          f"{response.response=}"
+          "\n"
+          f"{response.metadata['sql_query']}")
+    retrieved_tables = query_engine.sql_retriever._get_tables(input_query)
+    print(f"{retrieved_tables=}")
