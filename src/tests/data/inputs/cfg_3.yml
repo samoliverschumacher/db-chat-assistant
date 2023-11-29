@@ -1,0 +1,19 @@
+appproach: "sql_engine_w_reranking"
+database:
+  path: "sqlite:///data/chinook.db" # must be a sqlite path
+  metadata:
+    metadata_path: "sqlite:///data/chinook.db"
+    table_name: "table_descriptions"
+    document_id_like: "%-2" # Conforms to wildcard after SQL "LIKE"
+index:
+  name: "llama2reranker"
+  class: "ollama"
+  retriever_kwargs: # Kwargs passed into function: llama_index.objects.ObjectIndex.as_retriever
+    similarity_top_k: 4
+  reranking:
+    config_object: ReRankerLLMConfig
+    reranker_kwargs:  # kwargs passed into class: llama_index.postprocessor.LLMRerank
+      top_n: 3
+llm:
+  name: "llama2"
+  class: "ollama"
