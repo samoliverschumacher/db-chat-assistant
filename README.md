@@ -36,11 +36,19 @@ Compatible with llama-index (3.8GB)
 ollama run llama2
 ```
 
+### Customise a local model
+
+- See [example in Modelfile](src/dbchat/models/ollama-llama2-reranker) for more info
+- See parameters in https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md
+
+
 ## SQLLite CSV database locally.
 
 ```
 sudo apt install sqlite3
 ```
+
+
 
 ### Create metadata from a database file
 
@@ -54,6 +62,10 @@ Convert the YAML table metadata files into rows of a single `table_descriptions.
 python src/dbchat/scripts/meta_to_table.py
 ```
 
+Add new metadata descriptions to the `table_descriptions.csv` using this CLI script
+```bash
+python src/dbchat/scripts/add_table_descriptions.py
+```
 
 Add a new table to the database that contains a row for each table's metadata
 ```
