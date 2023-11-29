@@ -5,6 +5,7 @@ from llama_index import (LLMPredictor, ServiceContext, SQLDatabase,
 from llama_index.llms import Ollama
 from llama_index.objects import (ObjectIndex, SQLTableNodeMapping,
                                  SQLTableSchema)
+from llama_index.indices.struct_store.sql_query import SQLTableRetrieverQueryEngine
 from sqlalchemy import DDL, MetaData, Table, create_engine, inspect
 import yaml
 
@@ -146,10 +147,14 @@ if __name__ == '__main__':
     sql_database = get_sql_database(db_path)
     retriever = get_retriever(sql_database, config)
 
-    # Patch the SQLTableRetrieverQueryEngine, with reranking
-    query_engine = sql_query_engine_with_reranking(sql_database, retriever,
-                                                   service_context,
-                                                   config['index'])
+    if 'reranking' in config['index']:
+        # Patch the SQLTableRetrieverQueryEngine, with reranking
+        query_engine = sql_query_engine_with_reranking(sql_database, retriever,
+                                                       service_context,
+                                                       config['index'])
+    else:
+        query_engine = SQLTableRetrieverQueryEngine(
+            sql_database, retriever, service_context=service_context)
 
     input_query = "How much money did Berlin make?"
     response = query_engine.query(input_query)
