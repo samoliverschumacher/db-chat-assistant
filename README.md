@@ -7,3 +7,22 @@ connects a database schema information to a LLM to give results without knowing 
 ---
 
 [Schematic for this system](https://app.diagrams.net/#G1JNsvPrjDpMweYzJn9UKzID2g3g04YQyP)
+
+
+# Installation
+
+## Project
+
+Create environment (is langauge agnostic, tools like pip to install python deps)
+```bash
+conda env create -f environment.yml
+```
+
+Instal python deps, including development and test related dependencies
+```bash
+pip install -e .[test,dev]
+```
+
+```bash
+pre-commit install
+```
