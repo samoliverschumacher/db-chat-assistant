@@ -16,8 +16,8 @@ from llama_index.evaluation.faithfulness import DEFAULT_EVAL_TEMPLATE as faithfu
 from llama_index.evaluation.relevancy import DEFAULT_EVAL_TEMPLATE as relevancy_eval_template
 from llama_index.llms import Ollama
 
-from dbchat import ROOT_DIR, datastore, pandas_agent
-from tests.utils import save_test_results
+from dbchat import ROOT_DIR, datastore
+from dbchat.evaluation.utils import load_evaluation_data, save_test_results
 
 SYNTHETIC_JUDGE_SYSTEM_PROMPT = """
 Human: 
@@ -60,23 +60,6 @@ def teardown_module(module):
     server.terminate()
 
 
-def get_test_data(test_data_path, input_id):
-    # Load example user querys (test data, test config)
-
-    test_data = pd.read_csv(test_data_path, sep='|')
-    test_data_expected = pd.read_csv(str(test_data_path).replace(
-        'inputs', 'outputs'),
-                                     sep='|')
-
-    input_query = test_data.loc[test_data.id == input_id, 'query']
-    expected_tables = test_data.loc[test_data.id == input_id,
-                                    'tables'].split(',')
-    expected_response = test_data_expected.loc[
-        test_data_expected.index == input_id,
-        'response']  # "Berlin made $75.24"
-    return input_query, expected_response, expected_tables
-
-
 ################################################################################################
 #           TEST IF RETRIEVED DOCUMENTS ARE CORRECT
 ################################################################################################
@@ -88,7 +71,7 @@ def test_table_name_retrieval():
     test_data_path = ROOT_DIR.parent / "tests" / "data" / "inputs" / "end-to-end.csv"
     with open(ROOT_DIR.parent / "tests/data/inputs/cfg_1.yml") as f:
         cfg = yaml.safe_load(f)
-    input_query, expected_response, expected_tables = get_test_data(
+    input_query, expected_response, expected_tables = load_evaluation_data(
         test_data_path, input_id=1)  # id matched to row in test data
 
     # Load the documents
@@ -178,7 +161,7 @@ def test_context_retrieval():
     test_data_path = ROOT_DIR.parent / "tests" / "data" / "inputs" / "end-to-end.csv"
     with open(ROOT_DIR.parent / "tests/data/inputs/cfg_1.yml") as f:
         cfg = yaml.safe_load(f)
-    input_query, expected_response, expected_tables = get_test_data(
+    input_query, expected_response, expected_tables = load_evaluation_data(
         test_data_path, input_id=1)  # id matched to row in test data
 
     # Load the documents
@@ -253,7 +236,7 @@ def test_faithfulness():
     test_data_path = ROOT_DIR.parent / "tests" / "data" / "inputs" / "end-to-end.csv"
     with open(ROOT_DIR.parent / "tests/data/inputs/cfg_1.yml") as f:
         cfg = yaml.safe_load(f)
-    input_query, expected_response, expected_tables = get_test_data(
+    input_query, expected_response, expected_tables = load_evaluation_data(
         test_data_path, input_id=1)  # id matched to row in test data
 
     # Initialise the llm
@@ -318,7 +301,7 @@ def test_faithfulness_per_context():
     test_data_path = ROOT_DIR.parent / "tests" / "data" / "inputs" / "end-to-end.csv"
     with open(ROOT_DIR.parent / "tests/data/inputs/cfg_1.yml") as f:
         cfg = yaml.safe_load(f)
-    input_query, expected_response, expected_tables = get_test_data(
+    input_query, expected_response, expected_tables = load_evaluation_data(
         test_data_path, input_id=1)  # id matched to row in test data
 
     # Initialise the llm
@@ -383,7 +366,7 @@ def test_faithfulness_with_query():
     test_data_path = ROOT_DIR.parent / "tests" / "data" / "inputs" / "end-to-end.csv"
     with open(ROOT_DIR.parent / "tests/data/inputs/cfg_1.yml") as f:
         cfg = yaml.safe_load(f)
-    input_query, expected_response, expected_tables = get_test_data(
+    input_query, expected_response, expected_tables = load_evaluation_data(
         test_data_path, input_id=1)  # id matched to row in test data
 
     # Initialise the encoder
@@ -455,7 +438,7 @@ def test_synthetic_judge():
     test_data_path = ROOT_DIR.parent / "tests" / "data" / "inputs" / "end-to-end.csv"
     with open(ROOT_DIR.parent / "tests/data/inputs/cfg_1.yml") as f:
         cfg = yaml.safe_load(f)
-    input_query, expected_response, expected_tables = get_test_data(
+    input_query, expected_response, expected_tables = load_evaluation_data(
         test_data_path, input_id=1)  # id matched to row in test data
 
     # Run the pandas agent workflow
