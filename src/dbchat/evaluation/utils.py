@@ -1,102 +1,147 @@
 import csv
+import itertools
 import json
+import sqlite3
+from pathlib import Path
+from typing import ( Dict, Iterator, List, Optional, Union, overload )
 
-import pandas as pd
+import csv
+from typing import Iterator, Dict, Optional, Union, List, overload
+from pathlib import Path
+import itertools
 
 
-def save_test_results(results, test_results_path):
+def save_test_results( results, test_results_path ):
     """Appends a json array with the results."""
-    if (test_results_path).exists():
-        with open(test_results_path, 'r') as file:
-            data = json.load(file)
+    if ( test_results_path ).exists():
+        with open( test_results_path, 'r' ) as file:
+            data = json.load( file )
     else:
         data = []
-    data.append(results)
+    data.append( results )
 
-    with open(test_results_path, 'a') as f:
-        json.dump(results, f)
-
-
-# Loader for evaluation run
-# load config
-# load evaluation data
-# - input user queries
-# - expected response
-# - expected tables used
-def load_evaluation_data(test_data_path, input_id):
-
-    test_data = pd.read_csv(test_data_path, sep='|')
-    test_data_expected = pd.read_csv(str(test_data_path).replace(
-        'inputs', 'outputs'),
-                                     sep='|')
-
-    if input_id:
-        input_query = test_data.loc[test_data.id == input_id, 'query']
-        expected_tables = test_data.loc[test_data.id == input_id,
-                                        'tables'].split(',')
-        expected_response = test_data_expected.loc[
-            test_data_expected.index == input_id,
-            'response']  # "Berlin made $75.24"
-        return input_query, expected_response, expected_tables
-
-    return test_data.loc[:,
-                         'query'], test_data_expected.loc[:,
-                                                          'response'], test_data.loc[:,
-                                                                                     'tables']
+    with open( test_results_path, 'a' ) as f:
+        json.dump( results, f )
 
 
-def evaluation_data_generator(test_data_path, input_id):
-    test_data_file = str(test_data_path)
-    test_data_expected_file = test_data_file.replace('inputs', 'outputs')
+import sqlite3
+from typing import Iterator, Dict, Optional, Union, List, overload
 
-    fieldnames = {
-        "input_query": "user_query",
-        "expected_response": "response",
-        "relevant_tables": "tables",
-        "expected_query_id": "query_id",
-    }
 
-    with open(test_data_file, mode='r',
-              newline='') as infile, open(test_data_expected_file,
-                                          mode='r',
-                                          newline='') as expectfile:
+@overload
+def load_evaluation_sqlite_data( data_path: str,
+                                 chunksize: Optional[ int ] = None,
+                                 stream: bool = False ) -> List[ Dict[ str, str ] ]:
+    ...
 
-        reader = csv.DictReader(infile, delimiter='|')
-        expected_reader = csv.DictReader(expectfile, delimiter='|')
 
-        input_query, expected_response, relevant_tables = None, None, None
-        if input_id:
-            # Yield data for the specific ID
-            for row in reader:
-                if int(row['id']) == input_id:
-                    input_query = row[fieldnames['input_query']]
-                    relevant_tables = row[fieldnames['relevant_tables']].split(
-                        ',')
+@overload
+def load_evaluation_sqlite_data( data_path: str,
+                                 chunksize: int = 1,
+                                 stream: bool = True ) -> Iterator[ List[ Dict[ str, str ] ] ]:
+    ...
+
+
+def load_evaluation_sqlite_data(
+        data_path: str,
+        chunksize: Optional[ int ] = None,
+        stream: bool = True ) -> Union[ Iterator[ List[ Dict[ str, str ] ] ], List[ Dict[ str, str ] ] ]:
+    """
+    Load evaluation data from a sqlite database (`data_path`).
+
+    Either streams n=`chunksize` rows at a time, or loads all rows at once.
+    """
+
+    if not stream:
+        # Connect to the SQLite database
+        conn = sqlite3.connect( data_path )
+        cursor = conn.cursor()
+
+        # Execute a SELECT query to retrieve the rows from the database
+        cursor.execute( "SELECT id, user_query, response, tables FROM evaluation_data" )
+
+        rows = cursor.fetchall()
+        result = [ {
+            'id': row[ 0 ],
+            'user_query': row[ 1 ],
+            'response': row[ 2 ],
+            'tables': row[ 3 ]
+        } for row in rows ]
+
+        # Close the database connection
+        conn.close()
+
+        return result
+    else:
+        return _load_evaluation_sqlite_data_generator( data_path, chunksize )
+
+
+def _load_evaluation_sqlite_data_generator( data_path: str,
+                                            chunksize: Optional[ int ] = None
+                                          ) -> Iterator[ List[ Dict[ str, str ] ] ]:
+    # Connect to the SQLite database
+    conn = sqlite3.connect( data_path )
+    cursor = conn.cursor()
+
+    # Execute a SELECT query to retrieve the rows from the database
+    cursor.execute( "SELECT id, user_query, response, tables FROM evaluation_data" )
+
+    # Fetch rows in chunks
+    while True:
+        rows = cursor.fetchmany( chunksize )
+        if not rows:
+            break
+        yield [ {
+            'id': row[ 0 ],
+            'user_query': row[ 1 ],
+            'response': row[ 2 ],
+            'tables': row[ 3 ]
+        } for row in rows ]
+
+    # Close the database connection
+    conn.close()
+
+
+@overload
+def load_evaluation_csv_data( data_path: Union[ Path, str ],
+                              delimiter: str = '|',
+                              stream: bool = False,
+                              chunksize = None ) -> List[ Dict[ str, str ] ]:
+    ...
+
+
+@overload
+def load_evaluation_csv_data( data_path: Union[ Path, str ],
+                              delimiter: str = '|',
+                              stream: bool = True,
+                              chunksize: Optional[ int ] = 1 ) -> Iterator[ List[ Dict[ str, str ] ] ]:
+    ...
+
+
+def load_evaluation_csv_data(
+    data_path: Union[ Path, str ],
+    delimiter: str = '|',
+    stream: bool = True,
+    chunksize: Optional[ int ] = 1
+) -> Union[ List[ Dict[ str, str ] ], Iterator[ List[ Dict[ str, str ] ] ] ]:
+    """
+    Load evaluation data from a CSV file.
+
+    Either streams n=`chunksize` rows at a time, or loads all rows at once.
+    """
+
+    def chunks():
+        with open( str( data_path ), mode = 'r', newline = '' ) as file:
+            reader = csv.DictReader( file, delimiter = delimiter )
+            while True:
+                rows = list( itertools.islice( reader, chunksize ) )
+                if not rows:
                     break
-            if input_query is None:
-                raise ValueError(f"Input ID {input_id} not found in test data")
+                yield rows
 
-            for expected_row in expected_reader:
-                if int(expected_row[
-                        fieldnames['expected_query_id']]) == input_id:
-                    expected_response = expected_row[
-                        fieldnames['expected_response']]
-                    break
-
-            yield input_query, expected_response, relevant_tables
-        else:
-            # Yield all data
-            for row, expected_row in zip(reader, expected_reader):
-                input_query = row[fieldnames['input_query']]
-                relevant_tables = row[fieldnames['relevant_tables']].split(',')
-                expected_response = expected_row[
-                    fieldnames['expected_response']]
-                yield input_query, expected_response, relevant_tables
-
-
-if __name__ == "__main__":
-    print(
-        next(
-            evaluation_data_generator(
-                "/mnt/c/Users/ssch7/repos/db-chat-assistant/src/tests/data/inputs/end-to-end.csv",
-                input_id=1)))
+    if not stream:
+        with open( str( data_path ), mode = 'r', newline = '' ) as file:
+            reader = csv.DictReader( file, delimiter = delimiter )
+            return list( reader )
+    else:
+        return chunks()

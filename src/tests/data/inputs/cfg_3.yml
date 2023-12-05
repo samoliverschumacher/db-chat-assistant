@@ -1,4 +1,4 @@
-appproach: "sql_engine_w_reranking"
+approach: "sql_engine_w_reranking"
 database:
   path: "sqlite:///data/chinook.db" # must be a sqlite path
   metadata:
