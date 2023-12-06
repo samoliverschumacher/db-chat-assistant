@@ -1,3 +1,16 @@
+import logging
+import os
+import sys
+import dotenv
+from dbchat import ROOT_DIR
+
+# load logging level from .env variables
+dotenv.load_dotenv( ROOT_DIR.parent.parent / '.env' )
+log_level = os.getenv( "LOG_LEVEL", "INFO" )
+
+logging.basicConfig( stream = sys.stdout, level = log_level )
+logging.getLogger().addHandler( logging.FileHandler( "sql_agent.log" ) )
+
 from langchain.embeddings import OllamaEmbeddings
 from llama_index import ( LLMPredictor, ServiceContext, SQLDatabase, VectorStoreIndex,
                           set_global_service_context )
@@ -7,11 +20,10 @@ from llama_index.indices.struct_store.sql_query import SQLTableRetrieverQueryEng
 from sqlalchemy import MetaData, Table, create_engine, inspect
 import yaml
 
-from dbchat import ROOT_DIR
 from dbchat.models.reranking import sql_query_engine_with_reranking
 from langchain.chat_models import ChatOpenAI
 
-from typing import overload, Tuple
+from typing import Union, overload, Tuple
 
 
 def doc_query_fusion_retriever( obj_index ):
@@ -125,18 +137,25 @@ def get_retriever( sql_database, config: dict ) -> ObjectRetriever:
 
 
 @overload
-def create_agent( config, return_base_retriever: bool = False ) -> SQLTableRetrieverQueryEngine:
+def create_agent( config,
+                  debug: bool = False,
+                  return_base_retriever: bool = False ) -> SQLTableRetrieverQueryEngine:
     ...
 
 
 @overload
 def create_agent(
         config,
+        debug: bool = False,
         return_base_retriever: bool = True ) -> Tuple[ SQLTableRetrieverQueryEngine, ObjectRetriever ]:
     ...
 
 
-def create_agent( config, return_base_retriever = False ):
+def create_agent(
+    config,
+    debug: bool = False,
+    return_base_retriever: bool = False
+) -> Union[ SQLTableRetrieverQueryEngine, Tuple[ SQLTableRetrieverQueryEngine, ObjectRetriever ] ]:
     db_path = config[ 'database' ][ 'path' ]
 
     # Initialise the encoder with a deterministic model
@@ -151,8 +170,21 @@ def create_agent( config, return_base_retriever = False ):
     llm = Ollama( model = config[ 'llm' ][ 'name' ] )
     llm_predictor = LLMPredictor( llm = llm )
 
-    service_context = ServiceContext.from_defaults( embed_model = embedding_model,
-                                                    llm_predictor = llm_predictor )
+    if debug:
+        from llama_index.callbacks import (
+            CallbackManager,
+            LlamaDebugHandler,
+        )
+        # Access the logging
+        llama_debug = LlamaDebugHandler( print_trace_on_end = True )
+        callback_manager = CallbackManager( [ llama_debug ] )
+
+        service_context = ServiceContext.from_defaults( embed_model = embedding_model,
+                                                        llm_predictor = llm_predictor,
+                                                        callback_manager = callback_manager )
+    else:
+        service_context = ServiceContext.from_defaults( embed_model = embedding_model,
+                                                        llm_predictor = llm_predictor )
     set_global_service_context( service_context )
 
     sql_database = get_sql_database( db_path )
@@ -166,6 +198,7 @@ def create_agent( config, return_base_retriever = False ):
         query_engine = SQLTableRetrieverQueryEngine( sql_database,
                                                      retriever,
                                                      service_context = service_context )
+
     if return_base_retriever:
         return query_engine, retriever
     else:
