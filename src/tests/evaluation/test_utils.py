@@ -1,5 +1,10 @@
+import json
+from unittest.mock import mock_open, patch
+
 import pytest
-from dbchat.evaluation.utils import load_evaluation_csv_data  # Replace 'your_module' with the actual module name.
+
+from dbchat.evaluation.utils import load_evaluation_csv_data
+from dbchat.evaluation.utils import from_json_cache
 
 
 @pytest.fixture
@@ -45,6 +50,52 @@ def test_load_evaluation_csv_data_wrong_delimiter( sample_csv ):
 def test_load_evaluation_csv_data_file_not_found():
     with pytest.raises( FileNotFoundError ):
         load_evaluation_csv_data( 'nonexistent.csv', stream = False )
+
+
+# Test when no match is found in the cache
+def test_no_match_found():
+    # Mock data that does not match the input cache_key
+    mock_cache = { 'queryB_True': { 'key3': 'value1'}, 'queryC_False': { 'key4': 'value2'}}
+    mock_cache_file = 'path/to/mock_cache.json'
+    input_cache_key = ( 'queryA', { 'key1': 'value1', 'key2': 'value2'}, True )
+
+    with patch( 'json.load', return_value = mock_cache ), patch( 'builtins.open', mock_open() ):
+        result = from_json_cache( input_cache_key, mock_cache_file )
+
+        assert result is None  # No match should return None
+
+
+# Test when the cache file is not found
+def test_cache_file_not_found():
+    mock_cache_file = 'path/to/nonexistent_cache.json'
+    input_cache_key = ( 'queryA', { 'key1': 'value1', 'key2': 'value2'}, True )
+
+    with patch( 'builtins.open', mock_open() ) as mocked_open:
+        mocked_open.side_effect = FileNotFoundError
+
+        # with pytest.raises( FileNotFoundError ):
+        result = from_json_cache( input_cache_key, mock_cache_file )
+        assert result is None
+
+
+def test_match_found():
+    mock_cache = [ {
+        ( 'queryA', {
+            'key1': 'value1',
+            'key2': 'value2'
+        }, True ): {
+            'response': 'the answer',
+            'tables': [ 'table1', 'table2' ]
+        }
+    } ]
+    mock_cache_file = 'path/to/mock_cache.json'
+    input_cache_key = ( 'queryA', { 'key1': 'value1', 'key2': 'value2'}, True )
+    expected_value = ( 'queryA', { 'key1': 'value1', 'key2': 'value2'}, True )
+
+    with patch( 'json.load', return_value = mock_cache ), patch( 'builtins.open', mock_open() ):
+        with patch( 'dbchat.evaluation.utils.config_matches', return_value = True ):
+            result = from_json_cache( input_cache_key, mock_cache_file )
+            assert result == expected_value
 
 
 if __name__ == '__main__':
