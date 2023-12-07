@@ -207,16 +207,62 @@ def from_cache( cache_key: Tuple[ str, Dict[ str, Union[ Dict[ str, dict ], Dict
     return None
 
 
-# Placeholder for config_matches function (to be implemented)
-def config_matches( config, config_in_cache ):
-    """Only Some parts of a runner config need to be tested for equality;
+def config_matches( config: dict,
+                    config_in_cache: dict,
+                    ignore_paths: List[ str ] = [],
+                    include_paths: List[ str ] = [] ) -> bool:
+    """Checks if 2 configs are equivalent. Only Some parts of a config need to be tested for equality;
     - index/name
     - index/retriever_kwargs/*
     - index/reranking/*
     - database/metadata/document_id_like
     - llm/name
     """
-    pass
+    # Hardcoded key-paths to check
+    hardcoded_paths = [
+        "index/name", "index/retriever_kwargs/*", "index/reranking/*", "database/metadata/document_id_like",
+        "llm/name"
+    ]
+
+    # Combine hardcoded paths with include paths
+    include_paths.extend( hardcoded_paths )
+    include_paths = set( include_paths )
+
+    # find paths common to both include_paths and ignore_paths
+    common_paths = include_paths.intersection( ignore_paths )
+    if any( common_paths ):
+        raise ValueError( f"Common paths {common_paths} found in include_paths and ignore_paths. " )
+
+    # For each key-path, check that the values are equal in both configs
+    for key_path in include_paths:
+        if not compare_key_paths( config, config_in_cache, key_path ):
+            return False
+
+    return True
+
+
+def compare_key_paths( config: dict, config_in_cache: dict, key_path: str ) -> bool:
+    # Split the key-path into individual keys
+    keys = key_path.split( '/' )
+
+    # Iterate through the keys to access the corresponding values in the configs
+    for key in keys:
+        if key == '*':
+            # Handle wildcard key
+            continue
+        if key not in config or key not in config_in_cache:
+            # Key not found in one of the configs
+            return False
+
+        # Update the configs to the next level
+        config = config[ key ]
+        config_in_cache = config_in_cache[ key ]
+
+    # Check if the values are equal
+    if config != config_in_cache:
+        return False
+
+    return True
 
 
 def from_json_cache( cache_key: Tuple[ str, Dict[ str, Union[ Dict[ str, dict ], Dict[ str, int ] ] ], bool ],
@@ -232,15 +278,17 @@ def from_json_cache( cache_key: Tuple[ str, Dict[ str, Union[ Dict[ str, dict ],
         return None
 
     # Iterate over the cache items and check for config match
-    for key, value in cache.items():
+    for element in cache:
+        key = list( element.keys() )[ 0 ]
+        value = element[ key ]
         # Split the key back into its components (query, config, retrieve_only)
         key_query, key_retrieve_only_str = key.rsplit( '_', 1 )
-        key_retrieve_only = json.loads( key_retrieve_only_str )
+        key_retrieve_only = key_retrieve_only_str.lower() == 'true'
 
         # Check if the query and retrieve_only matches
-        if key_query == json.dumps( cache_key[ 0 ] ) and key_retrieve_only == cache_key[ 2 ]:
+        if key_query == cache_key[ 0 ] and key_retrieve_only == cache_key[ 2 ]:
             # Since config_matches function is not provided, this part is pseudo-code
-            if config_matches( cache_key[ 1 ], json.loads( key_query )[ 1 ] ):
+            if config_matches( cache_key[ 1 ], value ):
                 return value
 
     # If no match is found, return None
