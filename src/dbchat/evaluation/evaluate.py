@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from itertools import chain
 from pathlib import Path
 from typing import Dict, Iterator, List, Union
@@ -8,31 +9,29 @@ from llama_index.llms import LLM, Ollama
 from llama_index.prompts import ChatMessage, ChatPromptTemplate, MessageRole
 
 from dbchat.evaluation.utils import load_evaluation_csv_data
-from dbchat.sql_agent import create_agent
+from dbchat import sql_agent
+from dbchat.validation import AppConfig
 
 
 def run_batch_queries( queries: List[ str ],
                        config: dict,
-                       retrieve_only = False ) -> Dict[ str, Dict[ str, str ] ]:
-    """Run queries using the given config."""
+                       retrieve_only = False ) -> OrderedDict[ str, Dict[ str, str ] ]:
+    """Run a SQL agent pipeline on a list of queries using the given config."""
     # Create agent
-    query_engine, retriever = create_agent( config, return_base_retriever = True )
+    query_engine, retriever = sql_agent.create_agent( config, return_base_retriever = True )
 
-    results = {}
+    results = OrderedDict()
     for query in queries:
 
-        response = None
-
-        # Retrieve
         if config[ 'approach' ] == 'sql_engine_w_reranking':
             tables = retriever.retrieve( query )
             table_names = [ table.table_name for table in tables ]
         else:
             raise NotImplementedError
 
+        response = None
         if not retrieve_only:
             response = query_engine.query( query )
-
         result = {
             query: {
                 'response': response,
@@ -53,6 +52,8 @@ def evaluate_table_name_retrieval( test_data_path: Union[ Path, str ],
 
     with open( config_path ) as f:
         cfg = yaml.safe_load( f )
+    # Check the config is valid;
+    AppConfig( **cfg )
 
     data = load_evaluation_csv_data( test_data_path, stream = True )
     data: Iterator[ List[ Dict[ str, str ] ] ]
@@ -60,7 +61,6 @@ def evaluate_table_name_retrieval( test_data_path: Union[ Path, str ],
     # Flatten out the data into a single list of rows
     flattened_data = list( chain.from_iterable( data ) )
 
-    # Now you can process each row individually
     queries = [ row[ 'user_query' ] for row in flattened_data ]
     expected_tables = [ row[ 'tables' ].split( ',' ) for row in flattened_data ]
 
@@ -110,6 +110,8 @@ def evaluate_synthetic_judge( test_data_path, config_path ):
 
     with open( config_path ) as f:
         cfg = yaml.safe_load( f )
+    # Check the config is valid;
+    AppConfig( **cfg )
 
     data = load_evaluation_csv_data( test_data_path, stream = True )
     data: Iterator[ List[ Dict[ str, str ] ] ]
@@ -123,7 +125,6 @@ def evaluate_synthetic_judge( test_data_path, config_path ):
     # Flatten out the data into a single list of rows
     flattened_data = list( chain.from_iterable( data ) )
 
-    # Now you can process each row individually
     queries = [ row[ 'user_query' ] for row in flattened_data ]
     expected_responses = [ row[ 'response' ] for row in flattened_data ]
 
@@ -196,6 +197,8 @@ def evaluate_synthetic_judge_with_query( test_data_path, config_path ):
 
     with open( config_path ) as f:
         cfg = yaml.safe_load( f )
+    # Check the config is valid;
+    AppConfig( **cfg )
 
     data = load_evaluation_csv_data( test_data_path, stream = True )
     data: Iterator[ List[ Dict[ str, str ] ] ]
@@ -212,7 +215,7 @@ def evaluate_synthetic_judge_with_query( test_data_path, config_path ):
         llm: LLM,
         threshold: float = 4.0,
     ) -> Dict:
-        """Run correctness eval."""
+        """Run correctness evaluation using a LLM."""
         fmt_messages = eval_chat_template.format_messages(
             llm = llm,
             query = query_str,
@@ -237,7 +240,6 @@ def evaluate_synthetic_judge_with_query( test_data_path, config_path ):
     # Flatten out the data into a single list of rows
     flattened_data = list( chain.from_iterable( data ) )
 
-    # Now you can process each row individually
     queries = [ row[ 'user_query' ] for row in flattened_data ]
     expected_responses = [ row[ 'response' ] for row in flattened_data ]
 

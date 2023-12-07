@@ -127,6 +127,16 @@ def load_evaluation_csv_data(
     """
     Load evaluation data from a CSV file.
 
+    >>> load_evaluation_csv_data( data_path, delimiter = '|', stream = False )
+    [ { 'field1': 'val1', 'field2': 'val2' }, { 'field1': 'val3', 'field2': 'val4' } ]
+
+    As streaming data from an open 3-row csv file;
+    >>> gen = load_evaluation_csv_data( data_path, delimiter = '|', stream = True, chunksize = 2 )
+    >>> next( gen )
+    [ { 'f': 'v1' }, { 'f': 'v1' } ]
+    >>> next( gen )
+    [ { 'f': 'v1' } ]
+
     Either streams n=`chunksize` rows at a time, or loads all rows at once.
     """
 
@@ -149,6 +159,8 @@ def load_evaluation_csv_data(
 
 """
 Caching of Evaluation Results
+
+TODO: test and implement caching for evaluation loops
 """
 
 from cachetools import cached, TTLCache

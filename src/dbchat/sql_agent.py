@@ -156,6 +156,23 @@ def create_agent(
     debug: bool = False,
     return_base_retriever: bool = False
 ) -> Union[ SQLTableRetrieverQueryEngine, Tuple[ SQLTableRetrieverQueryEngine, ObjectRetriever ] ]:
+    """
+    Initializes an agent by setting up the database connection (llamaindex , loading
+    an embedding model, and constructing a query engine with optional
+    reranking. It can optionally return the base retriever alongside
+    the query engine.
+
+    Parameters:
+    - config: Configuration settings for the agent.
+    - debug: Boolean flag to enable debugging features.
+    - return_base_retriever: Boolean flag to return the base retriever.
+
+    Returns:
+    - If return_base_retriever is True, returns a tuple containing the
+      SQLTableRetrieverQueryEngine and the base ObjectRetriever,
+      otherwise just the SQLTableRetrieverQueryEngine.
+    """
+
     db_path = config[ 'database' ][ 'path' ]
 
     # Initialise the encoder with a deterministic model
