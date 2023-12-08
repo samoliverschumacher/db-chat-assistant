@@ -8,20 +8,34 @@ from langchain.chat_models import ChatOpenAI
 from llama_index.llms import LLM, Ollama
 from llama_index.prompts import ChatMessage, ChatPromptTemplate, MessageRole
 
-from dbchat.evaluation.utils import load_evaluation_csv_data
-from dbchat import sql_agent
+from dbchat.evaluation.utils import from_json_cache, load_evaluation_csv_data
+from dbchat import ROOT_DIR, sql_agent
 from dbchat.validation import AppConfig
+
+CACHE_PATH = ROOT_DIR / 'cache' / 'query_cache.json'
 
 
 def run_batch_queries( queries: List[ str ],
                        config: dict,
-                       retrieve_only = False ) -> OrderedDict[ str, Dict[ str, str ] ]:
+                       retrieve_only = False,
+                       use_cached_values = True ) -> OrderedDict[ str, Dict[ str, str ] ]:
     """Run a SQL agent pipeline on a list of queries using the given config."""
     # Create agent
     query_engine, retriever = sql_agent.create_agent( config, return_base_retriever = True )
 
     results = OrderedDict()
     for query in queries:
+
+        if use_cached_values:
+            # check if this query has already been run for this config
+            cache_key = ( query, config, retrieve_only )
+            cached_value = from_json_cache( cache_key, CACHE_PATH )
+            if cached_value:
+                result = {
+                    query: cached_value,
+                }
+                results.update( result )
+                continue
 
         if config[ 'approach' ] == 'sql_engine_w_reranking':
             tables = retriever.retrieve( query )
@@ -64,7 +78,7 @@ def evaluate_table_name_retrieval( test_data_path: Union[ Path, str ],
     queries = [ row[ 'user_query' ] for row in flattened_data ]
     expected_tables = [ row[ 'tables' ].split( ',' ) for row in flattened_data ]
 
-    batch_responses = run_batch_queries( queries, cfg, retrieve_only = True )
+    batch_responses = run_batch_queries( queries, cfg, retrieve_only = True, use_cached_values = True )
 
     results = []
     for ( query, response ), tables in zip( batch_responses.items(), expected_tables ):
@@ -128,7 +142,7 @@ def evaluate_synthetic_judge( test_data_path, config_path ):
     queries = [ row[ 'user_query' ] for row in flattened_data ]
     expected_responses = [ row[ 'response' ] for row in flattened_data ]
 
-    batch_responses = run_batch_queries( queries, cfg, retrieve_only = True )
+    batch_responses = run_batch_queries( queries, cfg, retrieve_only = True, use_cached_values = True )
 
     results = []
     for ( query, response ), expected_response in zip( batch_responses.items(), expected_responses ):
@@ -243,7 +257,7 @@ def evaluate_synthetic_judge_with_query( test_data_path, config_path ):
     queries = [ row[ 'user_query' ] for row in flattened_data ]
     expected_responses = [ row[ 'response' ] for row in flattened_data ]
 
-    batch_responses = run_batch_queries( queries, cfg, retrieve_only = True )
+    batch_responses = run_batch_queries( queries, cfg, retrieve_only = True, use_cached_values = True )
 
     results = []
     for ( query, response ), expected_response in zip( batch_responses.items(), expected_responses ):

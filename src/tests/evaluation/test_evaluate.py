@@ -18,31 +18,73 @@ def mock_create_agent():
     return query_engine, retriever
 
 
+# def test_run_batch_queries( mock_create_agent ):
+#     # Unpack the mock objects from the fixture
+#     query_engine, retriever = mock_create_agent
+
+#     # Patch the create_agent function to return the mock objects
+#     with patch( 'dbchat.evaluation.evaluate.create_agent', return_value = ( query_engine, retriever ) ):
+#         # Define your test parameters
+#         queries = [ "What is the answer to life, the universe, and everything?" ]
+#         config = { 'approach': 'sql_engine_w_reranking'}
+
+#         # Call the function under test
+#         results = evaluate.run_batch_queries( queries, config )
+
+#         # Assert the results are as expected
+#         expected_results = {
+#             queries[ 0 ]: {
+#                 'response': "The answer is 42.",
+#                 'tables': [ "table1", "table2", "table3" ]
+#             },
+#         }
+#         assert results == expected_results
+
+#         # Assert that the query engine and retriever were called correctly
+#         query_engine.query.assert_called_once_with( queries[ 0 ] )
+#         retriever.retrieve.assert_called_once_with( queries[ 0 ] )
+
+
 def test_run_batch_queries( mock_create_agent ):
     # Unpack the mock objects from the fixture
     query_engine, retriever = mock_create_agent
 
-    # Patch the create_agent function to return the mock objects
-    with patch( 'dbchat.evaluation.evaluate.create_agent', return_value = ( query_engine, retriever ) ):
-        # Define your test parameters
-        queries = [ "What is the answer to life, the universe, and everything?" ]
-        config = { 'approach': 'sql_engine_w_reranking'}
+    # Mock the from_json_cache function
+    with patch( 'dbchat.evaluation.evaluate.from_json_cache' ) as mock_from_json_cache:
+        # Set the return value of the mock function based on the value of use_cached_values
+        mock_from_json_cache.return_value = { 'response': 'cached response', 'tables': [ 'cached_table' ]}
 
-        # Call the function under test
-        results = evaluate.run_batch_queries( queries, config )
+        # Patch the create_agent function to return the mock objects
+        with patch( 'dbchat.evaluation.evaluate.sql_agent.create_agent',
+                    return_value = ( query_engine, retriever ) ):
+            # Define your test parameters
+            queries = [ "What is the answer to life, the universe, and everything?" ]
+            config = { 'approach': 'sql_engine_w_reranking'}
 
-        # Assert the results are as expected
-        expected_results = {
-            queries[ 0 ]: {
-                'response': "The answer is 42.",
-                'tables': [ "table1", "table2", "table3" ]
-            },
-        }
-        assert results == expected_results
+            # Call the function under test with use_cached_values set to True
+            results_with_cache = evaluate.run_batch_queries( queries, config, use_cached_values = True )
+            # Call the function under test with use_cached_values set to False
+            results_without_cache = evaluate.run_batch_queries( queries, config, use_cached_values = False )
 
-        # Assert that the query engine and retriever were called correctly
-        query_engine.query.assert_called_once_with( queries[ 0 ] )
-        retriever.retrieve.assert_called_once_with( queries[ 0 ] )
+            # Assert the results are as expected
+            expected_results_with_cache = {
+                queries[ 0 ]: {
+                    'response': 'cached response',
+                    'tables': [ 'cached_table' ]
+                },
+            }
+            expected_results_without_cache = {
+                queries[ 0 ]: {
+                    'response': 'The answer is 42.',
+                    'tables': [ 'table1', 'table2', 'table3' ]
+                },
+            }
+            assert results_with_cache == expected_results_with_cache
+            assert results_without_cache == expected_results_without_cache
+
+            # Assert that the query engine and retriever were called correctly
+            query_engine.query.assert_called_once_with( queries[ 0 ] )
+            retriever.retrieve.assert_called_once_with( queries[ 0 ] )
 
 
 @pytest.fixture
