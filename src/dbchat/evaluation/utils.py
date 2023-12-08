@@ -266,7 +266,7 @@ def compare_key_paths( config: dict, config_in_cache: dict, key_path: str ) -> b
 
 
 def from_json_cache( cache_key: Tuple[ str, Dict[ str, Union[ Dict[ str, dict ], Dict[ str, int ] ] ], bool ],
-                     cache_filepath: str ) -> Optional[ Dict[ str, Any ] ]:
+                     cache_filepath: Union[ str, Path ] ) -> Optional[ Dict[ str, Any ] ]:
     """Retrieve cached result from a JSON file based on the cache key.
 
     Key's are: `cache_key = ( query, config, retrieve_only )`"""
@@ -282,8 +282,7 @@ def from_json_cache( cache_key: Tuple[ str, Dict[ str, Union[ Dict[ str, dict ],
         key = list( element.keys() )[ 0 ]
         value = element[ key ]
         # Split the key back into its components (query, config, retrieve_only)
-        key_query, key_retrieve_only_str = key.rsplit( '_', 1 )
-        key_retrieve_only = key_retrieve_only_str.lower() == 'true'
+        key_query, key_retrieve_only = key[ 0 ], key[ 2 ]
 
         # Check if the query and retrieve_only matches
         if key_query == cache_key[ 0 ] and key_retrieve_only == cache_key[ 2 ]:
