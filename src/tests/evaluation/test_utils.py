@@ -52,19 +52,6 @@ def test_load_evaluation_csv_data_file_not_found():
         load_evaluation_csv_data( 'nonexistent.csv', stream = False )
 
 
-# Test when no match is found in the cache
-def test_no_match_found():
-    # Mock data that does not match the input cache_key
-    mock_cache = { 'queryB_True': { 'key3': 'value1'}, 'queryC_False': { 'key4': 'value2'}}
-    mock_cache_file = 'path/to/mock_cache.json'
-    input_cache_key = ( 'queryA', { 'key1': 'value1', 'key2': 'value2'}, True )
-
-    with patch( 'json.load', return_value = mock_cache ), patch( 'builtins.open', mock_open() ):
-        result = from_json_cache( input_cache_key, mock_cache_file )
-
-        assert result is None  # No match should return None
-
-
 # Test when the cache file is not found
 def test_cache_file_not_found():
     mock_cache_file = 'path/to/nonexistent_cache.json'
@@ -78,19 +65,40 @@ def test_cache_file_not_found():
         assert result is None
 
 
-def test_match_found():
+# Test when no match is found in the cache
+def test_no_match_found():
+    # Mock data that does not match the input cache_key
     mock_cache = [ {
-        ( 'queryA', {
+        ( 'query A', json.dumps( {
             'key1': 'value1',
             'key2': 'value2'
-        }, True ): {
+        } ), True ): {
+            'response': 'the answer',
+            'tables': [ 'table1', 'table2' ]
+        }
+    } ]
+    mock_cache_file = 'path/to/mock_cache.json'
+    input_cache_key = ( 'query B', { 'key1': 'value1', 'key2': 'value2'}, True )
+
+    with patch( 'json.load', return_value = mock_cache ), patch( 'builtins.open', mock_open() ):
+        result = from_json_cache( input_cache_key, mock_cache_file )
+
+        assert result is None  # No match should return None
+
+
+def test_match_found():
+    mock_cache = [ {
+        ( 'queryA', json.dumps( {
+            'key1': 'value1',
+            'key2': 'value2'
+        } ), True ): {
             'response': 'the answer',
             'tables': [ 'table1', 'table2' ]
         }
     } ]
     mock_cache_file = 'path/to/mock_cache.json'
     input_cache_key = ( 'queryA', { 'key1': 'value1', 'key2': 'value2'}, True )
-    expected_value = ( 'queryA', { 'key1': 'value1', 'key2': 'value2'}, True )
+    expected_value = { 'response': 'the answer', 'tables': [ 'table1', 'table2' ]}
 
     with patch( 'json.load', return_value = mock_cache ), patch( 'builtins.open', mock_open() ):
         with patch( 'dbchat.evaluation.utils.config_matches', return_value = True ):
