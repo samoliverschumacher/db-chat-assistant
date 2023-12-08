@@ -4,7 +4,7 @@ from unittest.mock import mock_open, patch
 import pytest
 
 from dbchat.evaluation.utils import load_evaluation_csv_data
-from dbchat.evaluation.utils import from_json_cache
+from dbchat.evaluation.utils import from_json_cache, config_matches, compare_key_paths
 
 
 @pytest.fixture
@@ -63,6 +63,98 @@ def test_cache_file_not_found():
         # with pytest.raises( FileNotFoundError ):
         result = from_json_cache( input_cache_key, mock_cache_file )
         assert result is None
+
+
+@patch( 'dbchat.evaluation.utils.compare_key_paths' )
+def test_config_matches( mock_compare_key_paths ):
+    # Set the return value of the mock compare_key_paths function to True
+    mock_compare_key_paths.return_value = True
+
+    # Your test configs
+    config = {
+        "index": {
+            "name": "config_index",
+            "retriever_kwargs": {
+                "arg1": "value1",
+                "arg2": "value2"
+            },
+            "reranking": {
+                "rank1": "value1"
+            }
+        },
+        "database": {
+            "metadata": {
+                "document_id_like": "123"
+            }
+        },
+        "llm": {
+            "name": "config_llm"
+        }
+    }
+
+    config_in_cache = {
+        "index": {
+            "name": "config_index",
+            "retriever_kwargs": {
+                "arg1": "value1",
+                "arg2": "value2"
+            },
+            "reranking": {
+                "rank1": "value1"
+            }
+        },
+        "database": {
+            "metadata": {
+                "document_id_like": "123"
+            }
+        },
+        "llm": {
+            "name": "config_llm"
+        }
+    }
+
+    # Test with the mock compare_key_paths function
+    assert config_matches( config, config_in_cache, ignore_paths = [], include_paths = [] )
+
+    # Test with a path that is both included and ignored
+    with pytest.raises( ValueError ):
+        config_matches( config,
+                        config_in_cache,
+                        ignore_paths = [ 'index/name' ],
+                        include_paths = [ 'index/name' ] )
+
+
+def test_compare_key_paths_matching():
+    # Test data where key paths are matching
+    config = { "index": { "name": "test_index", "retriever_kwargs": { "arg1": "value1",}}}
+
+    config_in_cache = { "index": { "name": "test_index", "retriever_kwargs": { "arg1": "value1",}}}
+
+    # The key path that we want to compare
+    key_path = "index/retriever_kwargs/arg1"
+
+    # Call the function and assert that the key paths are matching
+    assert compare_key_paths( config, config_in_cache, key_path )
+
+
+def test_compare_key_paths_not_matching():
+    # Test data where key paths are not matching
+    config = { "index": { "name": "test_index", "retriever_kwargs": { "arg1": "value1",}}}
+
+    config_in_cache = {
+        "index": {
+            "name": "test_index",
+            "retriever_kwargs": {
+                "arg1": "value2",  # Different value than in `config`
+            }
+        }
+    }
+
+    # The key path that we want to compare
+    key_path = "index/retriever_kwargs/arg1"
+
+    # Call the function and assert that the key paths are not matching
+    assert not compare_key_paths( config, config_in_cache, key_path )
 
 
 # Test when no match is found in the cache
