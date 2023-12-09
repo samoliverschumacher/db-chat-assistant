@@ -265,30 +265,110 @@ def compare_key_paths( config: dict, config_in_cache: dict, key_path: str ) -> b
     return True
 
 
+def cache_key_match( cache_key: Tuple[ str, Dict[ str, Any ], bool ],
+                     element: Dict[ Tuple[ str, Dict[ str, Any ], bool ], Any ] ) -> Any:
+    """
+    Check if the cache_key matches the element's key.
+
+    Args:
+    cache_key: A tuple (query, config, retrieve_only).
+    element: A dictionary with a single key-value pair, where the key is
+             a tuple (query, config, retrieve_only).
+
+    Returns:
+    The value associated with the matching key or None.
+    """
+    # get the only key from the element (the query)
+    key = next( iter( element ) )
+    value = element[ key ]
+
+    key_query, key_retrieve_only = key[ 0 ], key[ 2 ]
+
+    if ( key_query == cache_key[ 0 ] and ( not key_retrieve_only or key_retrieve_only == cache_key[ 2 ] ) ):
+        if config_matches( cache_key[ 1 ], key[ 1 ] ):
+            return value
+    return None
+
+
 def from_json_cache( cache_key: Tuple[ str, Dict[ str, Union[ Dict[ str, dict ], Dict[ str, int ] ] ], bool ],
                      cache_filepath: Union[ str, Path ] ) -> Optional[ Dict[ str, Any ] ]:
     """Retrieve cached result from a JSON file based on the cache key.
 
-    Key's are: `cache_key = ( query, config, retrieve_only )`"""
+    Expects a cache structure;
+    >>> [
+    ...     {
+    ...         ( 'What is the cost of ...?',
+    ...           { 'key': 'value' },
+    ...           True ): { 'response': 'Im not sure',
+    ...                     'tables': [ 'table1', 'table2' ] }
+    ...     },
+    ... ]
+
+    Key's are: `cache_key = ( query, config, retrieve_only )`
+    """
     try:
         with open( cache_filepath, 'r' ) as f:
-            cache = json.load( f )
+            cache: List[ dict ] = json.load( f )
     except FileNotFoundError:
         # If the cache file does not exist, return None
+        print( f"Cache file not found: {cache_filepath}" )
+        return None
+    except json.decoder.JSONDecodeError as je:
+        # If the cache file is not valid JSON, return None
+        print( f"Invalid JSON in cache file: {cache_filepath}" )
+        return None
+
+    if cache is None:
         return None
 
     # Iterate over the cache items and check for config match
-    for element in cache:
-        key = list( element.keys() )[ 0 ]
-        value = element[ key ]
-        # Split the key back into its components (query, config, retrieve_only)
-        key_query, key_retrieve_only = key[ 0 ], key[ 2 ]
+    for element in filter( bool, cache ):
+        cached_value = cache_key_match( cache_key, element )
+        if cached_value:
+            return cached_value
 
-        # Check if the query and retrieve_only matches
-        if key_query == cache_key[ 0 ] and key_retrieve_only == cache_key[ 2 ]:
-            # Since config_matches function is not provided, this part is pseudo-code
-            if config_matches( cache_key[ 1 ], value ):
-                return value
-
-    # If no match is found, return None
+    # No cache match is found
     return None
+
+
+def save_to_cache( results: Dict[ str, Dict[ str, Any ] ], config: Dict[ str, Any ], retrieve_only: bool,
+                   cache_filepath: Union[ str, Path ] ):
+    """
+    Save new results to the JSON cache.
+
+    Expects a cache structure;
+    >>> [
+    ...     {
+    ...         ( 'What is the cost of ...?',
+    ...           { 'key': 'value' },
+    ...           True ): { 'response': 'Im not sure',
+    ...                     'tables': [ 'table1', 'table2' ] }
+    ...     },
+    ... ]
+
+    :param results: Dictionary of results to be cached.
+    :param config: The configuration dictionary used for the queries.
+    :param retrieve_only: Whether the cache contains only retrieval results.
+    :param cache_filepath: The file path for the cache file.
+    """
+    # Load the existing cache
+    try:
+        with open( cache_filepath, 'r' ) as f:
+            cache: List[ Dict[ Tuple[ str, Dict[ str, Any ], bool ], dict ] ] = json.load( f )
+    except ( FileNotFoundError, json.decoder.JSONDecodeError ):
+        # If the cache file does not exist or is not valid JSON, start with an empty dict
+        cache = {}
+
+    # Iterate over the results to save them to the cache
+    for query, value in results.items():
+        cache_key = ( query, config, retrieve_only )
+
+        # Check if the key already exists in the cache
+        for element in cache:
+            if not cache_key_match( cache_key, element ):
+                # Add a new entry to the cache
+                cache.append( { cache_key: value} )
+
+    # Save the updated cache back to the file
+    with open( cache_filepath, 'w' ) as f:
+        json.dump( cache, f, indent = 4 )

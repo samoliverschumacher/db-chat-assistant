@@ -6,6 +6,8 @@ import pytest
 from dbchat.evaluation.utils import load_evaluation_csv_data
 from dbchat.evaluation.utils import from_json_cache, config_matches, compare_key_paths
 
+# TODO: check logic in all of these tests - they were written hastily with a LLM's assistance.
+
 
 @pytest.fixture
 def sample_csv( tmp_path ):

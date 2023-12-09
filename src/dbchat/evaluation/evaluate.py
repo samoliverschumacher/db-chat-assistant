@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from itertools import chain
 from pathlib import Path
+import string
 from typing import Dict, Iterator, List, Union
 
 import yaml
@@ -12,16 +13,17 @@ from dbchat.evaluation.utils import from_json_cache, load_evaluation_csv_data
 from dbchat import ROOT_DIR, sql_agent
 from dbchat.validation import AppConfig
 
-CACHE_PATH = ROOT_DIR / 'cache' / 'query_cache.json'
+CACHE_PATH = ROOT_DIR / '.cache' / 'query_cache.json'
 
 
 def run_batch_queries( queries: List[ str ],
                        config: dict,
                        retrieve_only = False,
-                       use_cached_values = True ) -> OrderedDict[ str, Dict[ str, str ] ]:
+                       use_cached_values = True,
+                       debug: bool = True ) -> OrderedDict[ str, Dict[ str, str ] ]:
     """Run a SQL agent pipeline on a list of queries using the given config."""
     # Create agent
-    query_engine, retriever = sql_agent.create_agent( config, return_base_retriever = True )
+    query_engine, retriever = sql_agent.create_agent( config, return_base_retriever = True, debug = debug )
 
     results = OrderedDict()
     for query in queries:
@@ -115,7 +117,7 @@ SUMMARY:
 Assistant:"""
 
 
-def evaluate_synthetic_judge( test_data_path, config_path ):
+def evaluate_synthetic_judge( test_data_path, config_path ) -> List[ dict ]:
     """Use an LLM as a judge that provides reasoning and a score out of 10.
     - Only considers response and desired response, not context or query.
     """
@@ -159,7 +161,7 @@ def evaluate_synthetic_judge( test_data_path, config_path ):
             'input_query': query,
             'expected_response': expected_response,
             'actual_response': response,
-            'synthesized_judgement': evaluation
+            'synthesized_judgement': str( evaluation )
         }
         results.append( result )
 
@@ -202,7 +204,7 @@ CORRECTNESS_USER_TMPL = """
 """
 
 
-def evaluate_synthetic_judge_with_query( test_data_path, config_path ):
+def evaluate_synthetic_judge_with_query( test_data_path, config_path ) -> List[ dict ]:
     """Use an LLM as a judge that provides reasoning and a score (CORRECTNESS).
     - Considers query, response, and the ideal response.
     """
@@ -241,7 +243,12 @@ def evaluate_synthetic_judge_with_query( test_data_path, config_path ):
 
         # Extract from response
         score_str, reasoning_str = raw_output.split( "\n", 1 )
-        score = float( score_str )
+        try:
+            score = float( score_str )
+        except ValueError:
+            # filter out non numeric values in the string, and convert it to a float
+            score = float( ''.join( filter( lambda x: x in "0123456789.", score_str ) ) )
+
         reasoning = reasoning_str.lstrip( "\n" )
 
         return { "passing": score >= threshold, "score": score, "reason": reasoning}
