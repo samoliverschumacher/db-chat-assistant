@@ -1,0 +1,9 @@
+appproach: "pandas_langchain_agent"
+database:
+  path: "sqlite:///data/chinook.db"
+index:
+  name: "orca-mini"
+  class: "ollama"
+llm:
+  name: "llama2"
+  class: "ollama"

@@ -1,0 +1,9 @@
+name: albums
+fields: AlbumId,Title,ArtistId
+description: |
+  table name: albums
+  table description: 
+  table fields are:
+  - name = AlbumId, type = integer, description = The unique identifier for the album
+  - name = Title, type = string, description = The name of the album
+  - name = ArtistId, type = integer, description = The unique identifier for the artist

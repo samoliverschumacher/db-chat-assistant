@@ -1,0 +1,19 @@
+name: customers
+fields: CustomerId,FirstName,LastName,Company,Address,City,State,Country,PostalCode,Phone,Fax,Email,SupportRepId
+description: |
+  table name: customers
+  table description: information about customers like their contact details and the support representative that theyve talked to.
+  table fields are:
+  - name = CustomerId, type = integer, description = The unique identifier for the customer
+  - name = FirstName, type = string, description = The first name of the customer
+  - name = LastName, type = string, description = The last name of the customer
+  - name = Company, type = string, description = The company name of the customer
+  - name = Address, type = string, description = The address of the customer
+  - name = City, type = string, description = The city of the customer
+  - name = State, type = string, description = The state of the customer
+  - name = Country, type = string, description = The country of the customer
+  - name = PostalCode, type = string, description = The postal code of the customer
+  - name = Phone, type = string, description = The phone number of the customer
+  - name = Fax, type = string, description = The fax number of the customer
+  - name = Email, type = string, description = The email address of the customer
+  - name = SupportRepId, type = integer, description = The unique identifier for the support representative

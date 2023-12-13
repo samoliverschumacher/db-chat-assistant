@@ -1,0 +1,8 @@
+name: genres
+fields: GenreId,Name
+description: |
+  table name: genres
+  table description: contains the genre names and their identifiers for all the music genres.
+  table fields are:
+  - name = GenreId, type = integer, description = The unique identifier for the genre.
+  - name = Name, type = string, description = The name of the genre.

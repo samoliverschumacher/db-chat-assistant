@@ -7,9 +7,9 @@ repos:
       - id: check-yaml  # Ensure YAML files are valid
       - id: check-json  # Ensure JSON files are parsable
         args: [ --unsafe ]
+      - id: end-of-file-fixer  # ensures that a file is either empty, or ends with one newline
       - id: mixed-line-ending  # CRLF is a vulnerability, fix before commit
         args: ['--fix=lf']
-      - id: end-of-file-fixer  # ensures that a file is either empty, or ends with one newline
   - repo: https://github.com/google/yapf
     rev: 'v0.40.2'
     hooks:

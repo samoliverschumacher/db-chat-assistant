@@ -1,0 +1,15 @@
+name: tracks
+fields: TrackId,Name,AlbumId,MediaTypeId,GenreId,Composer,Milliseconds,Bytes,UnitPrice
+description: |
+  table name: tracks
+  table description:
+  table fields are:
+   - name = TrackId, type = integer, description = Unique identifier for the track.
+   - name = Name, type = string, description = name of the track.
+   - name = AlbumId, type = integer, description = name of the album this track is in.
+   - name = MediaTypeId, type = integer, description = unique identifier for the type of media of this track.
+   - name = GenreId, type = integer, description = unique identifier for the genre of the track.
+   - name = Composer, type = string, description = composer of the track.
+   - name = Milliseconds, type = integer, description = length of the track in milliseconds.
+   - name = Bytes, type = integer, description = memory size of the track.
+   - name = UnitPrice, type = float, description = price in dollars.

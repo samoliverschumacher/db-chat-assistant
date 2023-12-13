@@ -1,2 +1,3 @@
-from .query_generation import LLMAgent
+from pathlib import Path
 
+ROOT_DIR = Path( __file__ ).parent

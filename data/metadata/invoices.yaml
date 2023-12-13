@@ -1,0 +1,15 @@
+name: invoices
+fields: InvoiceId,CustomerId,InvoiceDate,BillingAddress,BillingCity,BillingState,BillingCountry,BillingPostalCode,Total
+description: |
+  table name: invoices
+  table description: 
+  table fields are:
+  - name = InvoiceId, type = integer, description = Stores a unique identifier for each invoice in this table
+  - name = CustomerId, type = integer, description = An identifer given to a real person that uniquely identifies them.
+  - name = InvoiceDate, type = datetime, description = Date the invoice was created. format is "YYYY-MM-DD HH:mm:ss"
+  - name = BillingAddress, type = string, description = The address where the customer on the invoice lives. Format is "<street name> <street number>"
+  - name = BillingCity, type = string, description = The city the customer lives in.
+  - name = BillingState, type = string, description = the state the customer lives in.
+  - name = BillingCountry, type = string, description = the country the customer lives in.
+  - name = BillingPostalCode, type = string, description = the postcode where the customer lives.
+  - name = Total, type = float, description = the total amount in dollars, of the invoice

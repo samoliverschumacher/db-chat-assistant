@@ -1,0 +1,113 @@
+"TABLE_NAME","DOCUMENT_ID","DESCRIPTION"
+albums,albums-1,"table name: albums
+table description: 
+table fields are:
+- name = AlbumId, type = integer, description = The unique identifier for the album
+- name = Title, type = string, description = The name of the album
+- name = ArtistId, type = integer, description = The unique identifier for the artist
+"
+artists,artists-1,"table name: artists
+table description: 
+table fields are:
+- name = ArtistId, type = integer, description = The unique identifier for the artist
+- name = Name, type = string, description = The name of the artist
+"
+customers,customers-1,"table name: customers
+table description: information about customers like their contact details and the support representative that theyve talked to.
+table fields are:
+- name = CustomerId, type = integer, description = The unique identifier for the customer
+- name = FirstName, type = string, description = The first name of the customer
+- name = LastName, type = string, description = The last name of the customer
+- name = Company, type = string, description = The company name of the customer
+- name = Address, type = string, description = The address of the customer
+- name = City, type = string, description = The city of the customer
+- name = State, type = string, description = The state of the customer
+- name = Country, type = string, description = The country of the customer
+- name = PostalCode, type = string, description = The postal code of the customer
+- name = Phone, type = string, description = The phone number of the customer
+- name = Fax, type = string, description = The fax number of the customer
+- name = Email, type = string, description = The email address of the customer
+- name = SupportRepId, type = integer, description = The unique identifier for the support representative"
+employees,employees-1,"table name: employees
+table description: 
+table fields are:
+- name = EmployeeId, type = integer, description = The unique identifier for the employee
+- name = LastName, type = string, description = The last name of the employee
+- name = FirstName, type = string, description = The first name of the employee
+- name = Title, type = string, description = The title of the employee
+- name = ReportsTo, type = integer, description = The identifier of the employee who is the employees manager
+- name = BirthDate, type = datetime, description = Date the employee was born. format is ""YYYY-MM-DD HH:mm:ss""
+- name = HireDate, type = datetime, description = Date the employee started working. format is ""YYYY-MM-DD HH:mm:ss""
+- name = Address, type = string, description = The address of the employee. Street number, name
+- name = City, type = string, description = The city of the employee
+- name = State, type = string, description = The state of the employee
+- name = Country, type = string, description = The country of the employee
+- name = PostalCode, type = string, description = The postal code of the employee
+- name = Phone, type = string, description = The phone number of the employee
+- name = Fax, type = string, description = The fax number of the employee
+- name = Email, type = string, description = The email address of the employee"
+genres,genres-1,"table name: genres
+table description: contains the genre names and their identifiers for all the music genres.
+table fields are:
+- name = GenreId, type = integer, description = The unique identifier for the genre.
+- name = Name, type = string, description = The name of the genre."
+invoices,invoices-1,"table name: invoices
+table description: 
+table fields are:
+- name = InvoiceId, type = integer, description = Stores a unique identifier for each invoice in this table
+- name = CustomerId, type = integer, description = An identifer given to a real person that uniquely identifies them.
+- name = InvoiceDate, type = datetime, description = Date the invoice was created. format is ""YYYY-MM-DD HH:mm:ss""
+- name = BillingAddress, type = string, description = The address where the customer on the invoice lives. Format is ""<street name> <street number>""
+- name = BillingCity, type = string, description = The city the customer lives in.
+- name = BillingState, type = string, description = the state the customer lives in.
+- name = BillingCountry, type = string, description = the country the customer lives in.
+- name = BillingPostalCode, type = string, description = the postcode where the customer lives.
+- name = Total, type = float, description = the total amount in dollars, of the invoice
+"
+invoice_items,invoice_items-1,"table_name: invoice_items
+table description: A record of the items on invoices, including the track those items occured on the album.
+table fields are:
+- name = InvoiceLineId, type = integer, description = The unique identifier for which line on the invoice this item is on.
+- name = InvoiceId, type = integer, description = The unique identifier for the invoice that this item occured in.
+- name = TrackId, type = integer, description = The track number for this item, as occuring on the album.
+- name = UnitPrice, type = float, description = The price per unit of the item.
+- name = Quantity, type = integer, description = The count of items purchased.
+"
+media_types,media_types-1,"table name: media_types
+table description:
+table fields are:
+ - name = MediaTypeId, type = integer, description = Stores a unique identifier for the media type.
+ - name = Name, type = string, description = the name of the media type"
+playlists,playlists-1,"table name: playlists
+table description: 
+table fields are:
+- name = PlaylistId, type = integer, description = The unique identifier for the playlist
+- name = Name, type = string, description = The name of the playlist"
+playlist_track,playlist_track-1,"table name: playlist_track
+table description: Maps track ids to playlist ids.
+table fields are:
+- name = PlaylistId, type = integer, description = Stores a unique identifier for each playlist.
+- name = TrackId, type = integer, description = A unique identifer for the track"
+tracks,tracks-1,"table name: tracks
+table description:
+table fields are:
+ - name = TrackId, type = integer, description = Unique identifier for the track.
+ - name = Name, type = string, description = name of the track.
+ - name = AlbumId, type = integer, description = name of the album this track is in.
+ - name = MediaTypeId, type = integer, description = unique identifier for the type of media of this track.
+ - name = GenreId, type = integer, description = unique identifier for the genre of the track.
+ - name = Composer, type = string, description = composer of the track.
+ - name = Milliseconds, type = integer, description = length of the track in milliseconds.
+ - name = Bytes, type = integer, description = memory size of the track.
+ - name = UnitPrice, type = float, description = price in dollars."
+albums,albums-2,Albums and the artists who wrote them. Includes a unique AlbumId
+artists,artists-2,Lookup table for artist names
+customers,customers-2,information about customers like their contact details and the support representative that theyve talked to.
+employees,employees-2,"Employee information including address, who they report to, contact details and their Id"
+genres,genres-2,contains the genre names and their identifiers for all the music genres.
+invoices,invoices-2,"Details of the value of invoices sold, the customer the products were sold to and date"
+invoice_items,invoice_items-2,"A record of the items on invoices, including the track those items occured on the album."
+media_types,media_types-2,Lookup table for types of media
+playlists,playlists-2,Lookup table for playlists
+playlist_track,playlist_track-2,Maps track ids to playlist ids.
+tracks,tracks-2,"Tracks on a album, and details like price. Does not store a reference to playlist."

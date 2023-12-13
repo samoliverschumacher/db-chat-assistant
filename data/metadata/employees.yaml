@@ -1,0 +1,21 @@
+name: employees
+fields: EmployeeId,LastName,FirstName,Title,ReportsTo,BirthDate,HireDate,Address,City,State,Country,PostalCode,Phone,Fax,Email
+description: |
+  table name: employees
+  table description: 
+  table fields are:
+  - name = EmployeeId, type = integer, description = The unique identifier for the employee
+  - name = LastName, type = string, description = The last name of the employee
+  - name = FirstName, type = string, description = The first name of the employee
+  - name = Title, type = string, description = The title of the employee
+  - name = ReportsTo, type = integer, description = The identifier of the employee who is the employees manager
+  - name = BirthDate, type = datetime, description = Date the employee was born. format is "YYYY-MM-DD HH:mm:ss"
+  - name = HireDate, type = datetime, description = Date the employee started working. format is "YYYY-MM-DD HH:mm:ss"
+  - name = Address, type = string, description = The address of the employee. Street number, name
+  - name = City, type = string, description = The city of the employee
+  - name = State, type = string, description = The state of the employee
+  - name = Country, type = string, description = The country of the employee
+  - name = PostalCode, type = string, description = The postal code of the employee
+  - name = Phone, type = string, description = The phone number of the employee
+  - name = Fax, type = string, description = The fax number of the employee
+  - name = Email, type = string, description = The email address of the employee
