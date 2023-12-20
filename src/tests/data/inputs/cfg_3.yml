@@ -20,3 +20,6 @@ index:
 llm:
   name: "llama2"
   class: "ollama"
+evaluation:
+  retrieval:
+    metrics: 'accuracy,jacard'  # comma separated list of metrics

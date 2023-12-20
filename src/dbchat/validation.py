@@ -1,7 +1,21 @@
 from pydantic import BaseModel, Field, validator
-from typing import Dict
+from typing import Dict, Optional, Tuple, List
 
 from dbchat import ROOT_DIR
+
+try:
+    import sqlvalidator  # type: ignore
+except ImportError:
+    print( "Warning: sqlvalidator is not installed." )
+
+
+def offline_sql_validation( sql_query ) -> Tuple[ bool, str ]:
+    """Uses a python package to do basic offline checks on the sql statement."""
+    sql_query = sqlvalidator.parse( sql_query )  # type: ignore
+
+    if not sql_query.is_valid():
+        return sql_query.is_valid(), f"{sql_query.errors}"
+    return sql_query.is_valid(), sql_query
 
 
 class DatabaseConfig( BaseModel ):
@@ -67,6 +81,37 @@ def load_config( config_file ):
     except ValidationError as e:
         print( e )  # print( e.json() )
         return None
+
+
+"""Validators for evaluation data used by TruLens logging
+"""
+
+
+class TestPrompt( BaseModel ):
+    query: str
+
+
+class GoldStandardTestPrompt( TestPrompt ):
+    # Hand crafted ground truth makes this a gold standard test datapoint
+    response: str
+    sql: str
+    tables: List[ str ]
+
+
+class BatchTestPrompts( BaseModel ):
+    test_prompts: List[ TestPrompt ]
+
+    @validator( 'test_prompts' )  #, check_fields = False )
+    def validate_unique_prompts( cls, test_prompts ):
+        prompts = [ prompt.query for prompt in test_prompts ]
+        if len( prompts ) != len( set( prompts ) ):
+            raise ValueError( "Duplicate prompts found" )
+        return test_prompts
+
+
+class GoldStandardBatchTestPrompts( BatchTestPrompts ):
+    # Hand crafted ground truth makes this a gold standard test datapoint
+    test_prompts: List[ GoldStandardTestPrompt ]
 
 
 if __name__ == '__main__':

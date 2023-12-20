@@ -1,24 +1,25 @@
-from functools import partial
 import json
-from collections import namedtuple
+from functools import partial
 from itertools import dropwhile, takewhile
 from pathlib import Path
-from time import sleep
-from typing import Callable, Dict, List, Optional, Sequence, Union
+
+from typing import Dict, List, Optional, Sequence, Union
 from unittest.mock import patch
 
-from llama_index.prompts import PromptType
 import numpy as np
 import yaml
-from llama_index import LLMPredictor, MockEmbedding, MockLLMPredictor
+from llama_index import MockEmbedding, MockLLMPredictor
 from llama_index.llms import Ollama
-from pydantic import Extra, ValidationError
-from trulens_eval import ( Feedback, Provider, Select, Tru, TruCustomApp, TruLlama, instrument )
+from llama_index.prompts import PromptType
+from pydantic import Extra, Field, ValidationError
+from sklearn.metrics import hamming_loss, jaccard_score
+from trulens_eval import ( Feedback, Select, Tru, TruLlama )
 from trulens_eval.feedback import GroundTruthAgreement
 from trulens_eval.feedback.provider.base import LLMProvider
 
 from dbchat import ROOT_DIR, sql_agent
-from dbchat.validation import BatchTestPrompts, GoldStandardBatchTestPrompts, GoldStandardTestPrompt, TestPrompt
+from dbchat.validation import ( BatchTestPrompts, GoldStandardBatchTestPrompts, GoldStandardTestPrompt,
+                                TestPrompt )
 
 judge_llm = Ollama( model = 'llama2reranker' )
 
@@ -26,34 +27,66 @@ judge_llm = Ollama( model = 'llama2reranker' )
 class StandAloneProvider( LLMProvider ):
 
     ground_truth_prompts: List[ dict ]
+    possible_table_names: Optional[ List[ str ] ] = Field( default = None )
+    table_name_indicies: Optional[ Dict[ str, int ] ] = Field( default = None )
 
     def __init__( self, *args, **kwargs ):
         # TODO: why was self_kwargs required here independently of kwargs?
         self_kwargs = dict()
         self_kwargs.update( **kwargs )
 
+        if self_kwargs[ 'possible_table_names' ] is not None:
+            self_kwargs[ 'table_name_indicies' ] = {
+                table_name: i for i, table_name in enumerate( self_kwargs[ 'possible_table_names' ] )
+            }
+
         super().__init__( **self_kwargs )  # need to include pydantic.BaseModel.__init__
 
-    def matching_tables( self, user_query: str, retrieved_tables: List[ str ] ) -> float:
+    def jacard_matching_tables( self, user_query, retrieved_tables ):
+        """Measures the similarity between the predicted set of labels and the true set of labels.
+        It is calculated as the size of the intersection divided by the size of the union of the two label sets."""
+        return self.matching_tables( user_query, retrieved_tables, metric = 'jacard' )
+
+    def accuracy_matching_tables( self, user_query, retrieved_tables ):
+        """Instances where the predicted labels exactly match the true labels. This must be performed on a per-instance
+        basis (with all predicted tables and all actual tables).
+
+        Extracts the table names from the `NodeWithScore` objects.
+        """
+        tables = []
+        for retrieval in retrieved_tables:
+            tables.append( retrieval[ 'node' ][ 'metadata' ][ 'name' ] )
+        return self.matching_tables( user_query, retrieved_tables = tables, metric = 'accuracy' )
+
+    def matching_tables( self,
+                         user_query: str,
+                         retrieved_tables: List[ str ],
+                         metric = 'jacard_similarity' ) -> float:
+        """Multi label classification for a single instance. `metric`'s available: hamming_loss, jacard_similarity"""
+        if self.possible_table_names is None:
+            raise ValueError( 'possible_table_names must be set' )
+
         # get the first (and only) expected tables that matches the ground truth data
-        # using the prompt as a key
         actual_tables = [
             data[ 'tables' ] for data in self.ground_truth_prompts if data[ 'query' ] == user_query
         ][ 0 ]
 
-        tables_in_expected = np.intersect1d( actual_tables, retrieved_tables )
-        tables_not_in_expected = np.setdiff1d( actual_tables, retrieved_tables )
+        # Binary vectors to represent the tables
+        # create a binary valued vector from the possible table names indicies
+        # self.table_name_indicies: Dict[ str, int ]
+        y_pred = [ self.table_name_indicies.get( name, 0 ) for name in retrieved_tables ]
+        y_true = [ self.table_name_indicies.get( name, 0 ) for name in actual_tables ]
 
-        a = len( tables_in_expected ) / len( actual_tables )
-        a = np.clip( a, 0, 1 )
+        if metric == 'hamming_loss':
+            score = hamming_loss( y_pred = y_pred, y_true = y_true )
+            return score
+        elif metric == 'jacard_similarity':
+            # Binary average assumes that this score is aggregate with a sum.
+            score = jaccard_score( y_pred = y_pred, y_true = y_true, average = 'binary' )
 
-        return a  # must be aggregated
-
-        b = 1 if len( tables_not_in_expected ) == 0 else len( tables_not_in_expected ) / len( actual_tables )
-        b = np.clip( b, 0, 1 )
-
-        score = a * b
-        return score
+            return score
+        elif metric == 'accuracy':
+            return float( set( y_pred ) == set( y_true ) )
 
     def _create_chat_completion( self,
                                  prompt: Optional[ str ] = None,
@@ -64,7 +97,7 @@ class StandAloneProvider( LLMProvider ):
         return ans
 
     def agreement_measure( self, prompt, response ):
-
+        # TODO: use a more robust way to extract the score from the synthesized judegment
         expected_answer = [
             data[ 'response' ] for data in self.ground_truth_prompts if data[ 'query' ] == prompt
         ][ 0 ]
@@ -156,7 +189,7 @@ class MockedEmbedding( MockEmbedding ):
     """Useful for testing non LLM components."""
 
     def _get_query_embedding( self, query ) -> List[ float ]:
-        fp = "/mnt/c/Users/ssch7/repos/db-chat-assistant/src/tests/data/embeddings/query_embeddings.json"
+        fp = ROOT_DIR.parent.parent / "/src/tests/data/embeddings/query_embeddings.json"
         try:
             with open( fp ) as f:
                 embs = json.load( f )
@@ -167,7 +200,7 @@ class MockedEmbedding( MockEmbedding ):
             raise ve
 
     def _get_text_embedding( self, text ) -> List[ float ]:
-        fp = "/mnt/c/Users/ssch7/repos/db-chat-assistant/src/tests/data/embeddings/text_embeddings.json"
+        fp = ROOT_DIR.parent.parent / "/src/tests/data/embeddings/text_embeddings.json"
         with open( fp ) as f:
             embs = json.load( f )
         embedding = list( filter( lambda e: e[ 'text' ] == text, embs ) )[ 0 ]
@@ -175,6 +208,7 @@ class MockedEmbedding( MockEmbedding ):
 
 
 class MockedLLMPredictor( MockLLMPredictor ):
+    """Useful for testing non LLM components."""
 
     def predict( self, prompt, **prompt_args ):
         # TODO: make test data dynamically generated using `load_test_data( test_data_path )`
@@ -191,36 +225,40 @@ class MockedLLMPredictor( MockLLMPredictor ):
         return f"Unknown query: '{prompt}'"
 
 
-def get_app( tru: Tru, config: dict, evaluation_feedbacks: List[ Feedback ], app_id: str ):
+def _load_metrics( prompts: List[ dict ], config: dict ) -> List[ Feedback ]:
+    """Creates evaluation metrics for the TruLens recorder."""
 
-    query_engine = sql_agent.create_agent( config )
+    sql_database = sql_agent.get_sql_database( config[ 'database' ][ 'path' ] )
 
-    tru_recorder = TruLlama( query_engine,
-                             app_id = app_id,
-                             initial_app_loader = partial( sql_agent.create_agent, config ),
-                             feedbacks = evaluation_feedbacks,
-                             tru = tru )
-    return tru_recorder
-
-
-def run_mocked( prompts: List[ dict ], config: dict ):
-
-    provider = StandAloneProvider( ground_truth_prompts = prompts, model_engine = "ollamallama2" )
+    provider = StandAloneProvider( ground_truth_prompts = prompts,
+                                   model_engine = "ollamallama2",
+                                   possible_table_names = list( sql_database.metadata_obj.tables.keys() ) )
 
     ground_truth_collection = GroundTruthAgreement( ground_truth = prompts, provider = provider )
 
     f_groundtruth_rouge = Feedback( ground_truth_collection.rouge, name = "ROUGE" ).on_input_output()
     f_groundtruth_agreement_measure = Feedback( provider.agreement_measure,
                                                 name = "Agreement measure" ).on_input_output()
-    f_matching_tables = Feedback( provider.matching_tables ).on(
-        user_query = Select.RecordInput,
-        retrieved_tables = Select.Record.calls[ 0 ].rets[ : ].node.metadata.name ).aggregate( np.sum )
+    retrieval_metrics = []
+    for metric in config[ 'evaluation' ][ 'retrieval' ][ 'metrics' ].split( ',' ):
+        if metric == 'jacard':
+            retrieval_metrics.append(
+                Feedback( provider.jacard_matching_tables ).on(
+                    user_query = Select.RecordInput,
+                    retrieved_tables = Select.Record.calls[ 0 ].rets[ : ].node.metadata.name ).aggregate(
+                        np.sum ) )
+        elif metric == 'accuracy':
+            retrieval_metrics.append(
+                Feedback( provider.accuracy_matching_tables ).on(
+                    user_query = Select.RecordInput, retrieved_tables = Select.Record.calls[ 0 ].rets ) )
 
-    evaluation_feedbacks = [
-        f_groundtruth_rouge,
-        f_groundtruth_agreement_measure,
-        f_matching_tables,
-    ]
+    return [ f_groundtruth_rouge, f_groundtruth_agreement_measure, *retrieval_metrics ]
+
+
+def run_mocked( prompts: List[ dict ], config: dict ):
+
+    evaluation_metrics = _load_metrics( prompts, config )
+
     tru = Tru()
     tru.reset_database()  # if needed
     tru.run_dashboard()  # open a local streamlit app to explore
@@ -228,10 +266,17 @@ def run_mocked( prompts: List[ dict ], config: dict ):
     with patch( 'dbchat.sql_agent.MockLLMPredictor',
                 side_effect = MockedLLMPredictor ), patch( 'dbchat.sql_agent.MockEmbedding',
                                                            side_effect = MockedEmbedding ):
+        # Ensure the agent is created with the Mocked Predictor and Embedding
         config[ 'llm' ][ 'name' ] = 'fake'
         config[ 'index' ][ 'class' ] = 'fake'
         del config[ 'index' ][ 'reranking' ]
-        tru_recorder = get_app( tru, config, evaluation_feedbacks, 'LlamaIndex_App1' )
+        query_engine = sql_agent.create_agent( config )
+
+        tru_recorder = TruLlama( query_engine,
+                                 app_id = 'LlamaIndex_App1',
+                                 initial_app_loader = partial( sql_agent.create_agent, config ),
+                                 feedbacks = evaluation_metrics,
+                                 tru = tru )
 
         with tru_recorder as recording:
             for i, prompt in enumerate( prompts ):
@@ -242,28 +287,19 @@ def run_mocked( prompts: List[ dict ], config: dict ):
 
 def run( prompts: List[ dict ], config: dict ):
 
-    provider = StandAloneProvider( ground_truth_prompts = prompts, model_engine = "ollamallama2" )
+    evaluation_metrics = _load_metrics( prompts, config )
 
-    ground_truth_collection = GroundTruthAgreement( ground_truth = prompts, provider = provider )
-
-    f_groundtruth_rouge = Feedback( ground_truth_collection.rouge, name = "ROUGE" ).on_input_output()
-    f_groundtruth_agreement_measure = Feedback( provider.agreement_measure,
-                                                name = "Agreement measure" ).on_input_output()
-    f_matching_tables = Feedback( provider.matching_tables ).on(
-        user_query = Select.RecordInput,
-        retrieved_tables = Select.Record.calls[ 0 ].rets[ : ].node.metadata.name ).aggregate( np.sum )
-
-    evaluation_feedbacks = [
-        f_groundtruth_rouge,
-        f_groundtruth_agreement_measure,
-        f_matching_tables,
-    ]
     tru = Tru()
     tru.reset_database()  # if needed
     tru.run_dashboard()  # open a local streamlit app to explore
 
-    tru_recorder = get_app( tru, config, evaluation_feedbacks, 'LlamaIndex_App1' )
+    query_engine = sql_agent.create_agent( config )
 
+    tru_recorder = TruLlama( query_engine,
+                             app_id = 'LlamaIndex_App1',
+                             initial_app_loader = partial( sql_agent.create_agent, config ),
+                             feedbacks = evaluation_metrics,
+                             tru = tru )
     with tru_recorder as recording:
         for i, prompt in enumerate( prompts ):
 
