@@ -96,6 +96,27 @@ class StandAloneProvider( LLMProvider ):
         ans = judge_llm.complete( prompt )
         return ans
 
+    @staticmethod
+    def extract_score_from_judgement( judgement: str ) -> str:
+        # TODO: This is not perfect. Some generated judgement might not fit this extraction logic
+        digits = [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ]
+        lines = list( reversed( judgement.split( '\n' ) ) )
+        score = None
+        for line in lines:
+            if 'score' not in line:
+                continue
+            if any( [ line.startswith( digit ) for digit in digits ] ):
+                continue
+            if not any( digit in line for digit in digits ):
+                continue
+
+            score = ''.join( takewhile( lambda c: c.isdigit(), dropwhile( lambda c: not c.isdigit(),
+                                                                          line ) ) )
+            if score:
+                break
+
+        return score
+
     def agreement_measure( self, prompt, response ):
         # TODO: use a more robust way to extract the score from the synthesized judegment
         expected_answer = [
@@ -140,22 +161,7 @@ class StandAloneProvider( LLMProvider ):
                                     response = response )
         judgement = str( judge_llm.complete( question ) )
 
-        def extract_score_from_judgement( judgement: str ):
-            # TODO: This is not perfect. Some generated judgement might not fit this extraction logic
-            lines = list( reversed( judgement.split( '\n' ) ) )
-            score = None
-            for line in lines:
-                if 'score' in line and not any( [
-                        line.startswith( digit )
-                        for digit in [ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ]
-                ] ):
-                    score = ''.join(
-                        takewhile( lambda c: c.isdigit(), dropwhile( lambda c: not c.isdigit(), line ) ) )
-                    if score:
-                        break
-            return score
-
-        score = extract_score_from_judgement( judgement )
+        score = self.extract_score_from_judgement( judgement )
         try:
             if float( score ) / 10 > 1:
                 raise ValueError( f"score out of 10: {score}" )
@@ -189,7 +195,7 @@ class MockedEmbedding( MockEmbedding ):
     """Useful for testing non LLM components."""
 
     def _get_query_embedding( self, query ) -> List[ float ]:
-        fp = ROOT_DIR.parent.parent / "/src/tests/data/embeddings/query_embeddings.json"
+        fp = ROOT_DIR.parent.parent / "src/tests/data/embeddings/query_embeddings.json"
         try:
             with open( fp ) as f:
                 embs = json.load( f )
@@ -200,7 +206,7 @@ class MockedEmbedding( MockEmbedding ):
             raise ve
 
     def _get_text_embedding( self, text ) -> List[ float ]:
-        fp = ROOT_DIR.parent.parent / "/src/tests/data/embeddings/text_embeddings.json"
+        fp = ROOT_DIR.parent.parent / "src/tests/data/embeddings/text_embeddings.json"
         with open( fp ) as f:
             embs = json.load( f )
         embedding = list( filter( lambda e: e[ 'text' ] == text, embs ) )[ 0 ]
@@ -307,6 +313,7 @@ def run( prompts: List[ dict ], config: dict ):
             print( resp )
 
 
+# TODO: extract data pulled from database for evaluation: many ways to query database to get the same answer
 if __name__ == '__main__':
     prompts = [
         {
@@ -334,4 +341,5 @@ if __name__ == '__main__':
     config_path = ROOT_DIR.parent.parent / "src/tests/data/inputs/cfg_3.yml"
     with open( config_path ) as f:
         config = yaml.safe_load( f )
-    run_mocked( prompts, config )
+    run( prompts, config )
+    # run_mocked( prompts, config )
