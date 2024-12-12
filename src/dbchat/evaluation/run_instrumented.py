@@ -236,25 +236,34 @@ def _load_metrics( prompts: List[ dict ], config: dict ) -> List[ Feedback ]:
 
     sql_database = sql_agent.get_sql_database( config[ 'database' ][ 'path' ] )
 
+    # If you want a specific LLM evaluator, thats perhaps open source, or run locally:
     provider = StandAloneProvider( ground_truth_prompts = prompts,
                                    model_engine = "ollamallama2",
                                    possible_table_names = list( sql_database.metadata_obj.tables.keys() ) )
 
     ground_truth_collection = GroundTruthAgreement( ground_truth = prompts, provider = provider )
 
+    # .rouge is word overlap metric - a built-in metric of trulens_eval.
+    # on_input_output() comapres the app input to final output.
     f_groundtruth_rouge = Feedback( ground_truth_collection.rouge, name = "ROUGE" ).on_input_output()
+    # A hand-rolled function uses another LLM to score out of 10, then parse the response to float
     f_groundtruth_agreement_measure = Feedback( provider.agreement_measure,
                                                 name = "Agreement measure" ).on_input_output()
     retrieval_metrics = []
     for metric in config[ 'evaluation' ][ 'retrieval' ][ 'metrics' ].split( ',' ):
         if metric == 'jacard':
             retrieval_metrics.append(
+                # This is metric that applies to internal steps of the LLM app, not 
+                # comparing the input query with the final response. Using the FeedBack().on( ..., ... ) 
+                # to specify which steps in the app sequence of processes.
                 Feedback( provider.jacard_matching_tables ).on(
                     user_query = Select.RecordInput,
                     retrieved_tables = Select.Record.calls[ 0 ].rets[ : ].node.metadata.name ).aggregate(
                         np.sum ) )
         elif metric == 'accuracy':
             retrieval_metrics.append(
+                # The definition of the places to apply the Feedback measurement is via json pathing.
+                # i.e. Select.Record.calls[ 0 ].rets refers to a location.
                 Feedback( provider.accuracy_matching_tables ).on(
                     user_query = Select.RecordInput, retrieved_tables = Select.Record.calls[ 0 ].rets ) )
 
@@ -293,7 +302,7 @@ def run_mocked( prompts: List[ dict ], config: dict ):
 
 def run( prompts: List[ dict ], config: dict ):
 
-    evaluation_metrics = _load_metrics( prompts, config )
+    evaluation_metrics: List[ Feedback ] = _load_metrics( prompts, config )
 
     tru = Tru()
     tru.reset_database()  # if needed
